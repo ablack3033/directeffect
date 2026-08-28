@@ -30,17 +30,7 @@ fit_surface_stan <- function(de, reference, chains = 4, iter = 2000,
   # reference first; effects are reported back in network order.
   drugs <- c(reference, setdiff(de$treatments, reference))
   index <- stats::setNames(seq_along(drugs), drugs)
-
-  comparisons <- de$comparisons
-  # as.array keeps length-1 inputs dimensioned as Stan arrays.
-  stan_data <- list(
-    N = nrow(comparisons),
-    K = length(drugs),
-    target_idx = as.array(unname(index[comparisons$target])),
-    comparator_idx = as.array(unname(index[comparisons$comparator])),
-    y = as.array(comparisons$estimate),
-    se = as.array(comparisons$std_error)
-  )
+  stan_data <- stan_comparison_data(de$comparisons, index)
 
   sf <- rstan::sampling(
     compiled_stan_model("surface"),
@@ -84,20 +74,14 @@ anchor_surface_stan <- function(fit, anchors, chains = 4, iter = 2000,
   de <- fit$network
   drugs <- de$treatments
   index <- stats::setNames(seq_along(drugs), drugs)
-
-  comparisons <- de$comparisons
-  # as.array keeps length-1 inputs dimensioned as Stan arrays.
-  stan_data <- list(
-    N = nrow(comparisons),
-    K = length(drugs),
-    target_idx = as.array(unname(index[comparisons$target])),
-    comparator_idx = as.array(unname(index[comparisons$comparator])),
-    y = as.array(comparisons$estimate),
-    se = as.array(comparisons$std_error),
-    M = nrow(anchors),
-    anchor_idx = as.array(unname(index[anchors$drug])),
-    a = as.array(anchors$estimate),
-    a_se = as.array(anchors$std_error)
+  stan_data <- c(
+    stan_comparison_data(de$comparisons, index),
+    list(
+      M = nrow(anchors),
+      anchor_idx = as.array(unname(index[anchors$drug])),
+      a = as.array(anchors$estimate),
+      a_se = as.array(anchors$std_error)
+    )
   )
 
   sf <- rstan::sampling(
@@ -122,6 +106,19 @@ anchor_surface_stan <- function(fit, anchors, chains = 4, iter = 2000,
   )
   anchored$anchors <- anchors
   anchored
+}
+
+# The comparison block of data shared by both Stan programs. as.array
+# keeps length-1 inputs dimensioned as Stan arrays.
+stan_comparison_data <- function(comparisons, index) {
+  list(
+    N = nrow(comparisons),
+    K = length(index),
+    target_idx = as.array(unname(index[comparisons$target])),
+    comparator_idx = as.array(unname(index[comparisons$comparator])),
+    y = as.array(comparisons$estimate),
+    se = as.array(comparisons$std_error)
+  )
 }
 
 stan_effects_table <- function(sf, drugs, reference) {

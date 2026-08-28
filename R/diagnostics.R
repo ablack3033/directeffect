@@ -29,10 +29,7 @@
 #' }
 #' @export
 edge_residuals <- function(fit) {
-  if (!inherits(fit, "directeffect_fit")) {
-    stop("`fit` must be a `directeffect_fit` from `fit_surface()`.",
-         call. = FALSE)
-  }
+  assert_directeffect_fit(fit)
 
   comparisons <- fit$comparisons
   theta <- stats::setNames(fit$effects$estimate, fit$effects$drug)
@@ -83,10 +80,7 @@ edge_residuals <- function(fit) {
 #' }
 #' @export
 cycle_consistency <- function(fit) {
-  if (!inherits(fit, "directeffect_fit")) {
-    stop("`fit` must be a `directeffect_fit` from `fit_surface()`.",
-         call. = FALSE)
-  }
+  assert_directeffect_fit(fit)
 
   pooled <- pool_parallel_edges(fit$comparisons)
   treatments <- fit$network$treatments

@@ -53,10 +53,7 @@
 #' }
 #' @export
 anchor_surface <- function(fit, anchors = NULL, ...) {
-  if (!inherits(fit, "directeffect_fit")) {
-    stop("`fit` must be a `directeffect_fit` from `fit_surface()`.",
-         call. = FALSE)
-  }
+  assert_directeffect_fit(fit)
 
   de <- fit$network
   if (is.null(anchors)) {

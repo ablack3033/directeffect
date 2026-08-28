@@ -76,6 +76,15 @@ fit_surface <- function(de, engine = c("netmeta", "stan"),
   )
 }
 
+# Shared guard for every function that consumes the fit contract.
+assert_directeffect_fit <- function(fit) {
+  if (!inherits(fit, "directeffect_fit")) {
+    stop("`fit` must be a `directeffect_fit` from `fit_surface()`.",
+         call. = FALSE)
+  }
+  invisible(fit)
+}
+
 # Assemble the engine-agnostic fit object. Every engine adapter funnels
 # through this constructor so the contract stays in one place.
 new_directeffect_fit <- function(effects, heterogeneity, engine,

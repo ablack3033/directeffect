@@ -99,30 +99,18 @@ estimand_columns <- function() {
 }
 
 validate_comparisons <- function(comparisons) {
-  if (!is.data.frame(comparisons)) {
-    stop("`comparisons` must be a data frame.", call. = FALSE)
-  }
-  required <- c("study_id", "target", "comparator", "estimate", "std_error")
-  missing <- setdiff(required, names(comparisons))
-  if (length(missing) > 0) {
-    stop("`comparisons` is missing required column",
-         if (length(missing) > 1) "s" else "", ": ",
-         paste0("`", missing, "`", collapse = ", "), ".", call. = FALSE)
-  }
+  require_estimate_table(
+    comparisons, "comparisons",
+    c("study_id", "target", "comparator", "estimate", "std_error")
+  )
   if (nrow(comparisons) == 0) {
     stop("`comparisons` must contain at least one comparison.", call. = FALSE)
   }
 
   comparisons$target <- as.character(comparisons$target)
   comparisons$comparator <- as.character(comparisons$comparator)
-
-  bad_drug <- is.na(comparisons$target) | !nzchar(comparisons$target) |
-    is.na(comparisons$comparator) | !nzchar(comparisons$comparator)
-  if (any(bad_drug)) {
-    stop("`comparisons` has missing drug names in `target`/`comparator` ",
-         "on row", if (sum(bad_drug) > 1) "s" else "", " ",
-         paste(which(bad_drug), collapse = ", "), ".", call. = FALSE)
-  }
+  require_drug_names(comparisons, "comparisons",
+                     c("target", "comparator"))
 
   self <- comparisons$target == comparisons$comparator
   if (any(self)) {
@@ -131,19 +119,7 @@ validate_comparisons <- function(comparisons) {
          paste(which(self), collapse = ", "), ".", call. = FALSE)
   }
 
-  if (!is.numeric(comparisons$estimate) || anyNA(comparisons$estimate)) {
-    stop("`comparisons$estimate` must be numeric with no missing values.",
-         call. = FALSE)
-  }
-  bad_se <- !is.numeric(comparisons$std_error) | is.na(comparisons$std_error) |
-    comparisons$std_error <= 0
-  if (any(bad_se)) {
-    stop("`comparisons$std_error` must be positive on every row; row",
-         if (sum(bad_se) > 1) "s" else "", " ",
-         paste(which(bad_se), collapse = ", "), " ",
-         if (sum(bad_se) > 1) "are" else "is", " not.", call. = FALSE)
-  }
-
+  require_estimate_values(comparisons, "comparisons")
   comparisons
 }
 
@@ -151,30 +127,17 @@ validate_anchors_table <- function(anchors, comparisons) {
   if (is.null(anchors)) {
     return(NULL)
   }
-  if (!is.data.frame(anchors)) {
-    stop("`anchors` must be a data frame or NULL.", call. = FALSE)
-  }
-  required <- c("study_id", "drug", "reference", "estimate", "std_error")
-  missing <- setdiff(required, names(anchors))
-  if (length(missing) > 0) {
-    stop("`anchors` is missing required column",
-         if (length(missing) > 1) "s" else "", ": ",
-         paste0("`", missing, "`", collapse = ", "), ".", call. = FALSE)
-  }
+  require_estimate_table(
+    anchors, "anchors",
+    c("study_id", "drug", "reference", "estimate", "std_error")
+  )
   if (nrow(anchors) == 0) {
     return(NULL)
   }
 
   anchors$drug <- as.character(anchors$drug)
   anchors$reference <- as.character(anchors$reference)
-
-  bad_drug <- is.na(anchors$drug) | !nzchar(anchors$drug) |
-    is.na(anchors$reference) | !nzchar(anchors$reference)
-  if (any(bad_drug)) {
-    stop("`anchors` has missing drug names in `drug`/`reference` on row",
-         if (sum(bad_drug) > 1) "s" else "", " ",
-         paste(which(bad_drug), collapse = ", "), ".", call. = FALSE)
-  }
+  require_drug_names(anchors, "anchors", c("drug", "reference"))
 
   self <- anchors$drug == anchors$reference
   if (any(self)) {
@@ -183,18 +146,7 @@ validate_anchors_table <- function(anchors, comparisons) {
          paste(which(self), collapse = ", "), ".", call. = FALSE)
   }
 
-  if (!is.numeric(anchors$estimate) || anyNA(anchors$estimate)) {
-    stop("`anchors$estimate` must be numeric with no missing values.",
-         call. = FALSE)
-  }
-  bad_se <- !is.numeric(anchors$std_error) | is.na(anchors$std_error) |
-    anchors$std_error <= 0
-  if (any(bad_se)) {
-    stop("`anchors$std_error` must be positive on every row; row",
-         if (sum(bad_se) > 1) "s" else "", " ",
-         paste(which(bad_se), collapse = ", "), " ",
-         if (sum(bad_se) > 1) "are" else "is", " not.", call. = FALSE)
-  }
+  require_estimate_values(anchors, "anchors")
 
   network_drugs <- unique(c(comparisons$target, comparisons$comparator))
   orphan <- setdiff(anchors$drug, network_drugs)
@@ -207,6 +159,51 @@ validate_anchors_table <- function(anchors, comparisons) {
   }
 
   anchors
+}
+
+# Shared table validation: both input tables are "estimate tables" with
+# a study id, two drug-name columns, an estimate, and a standard error.
+
+require_estimate_table <- function(table, name, required) {
+  if (!is.data.frame(table)) {
+    stop("`", name, "` must be a data frame.", call. = FALSE)
+  }
+  missing <- setdiff(required, names(table))
+  if (length(missing) > 0) {
+    stop("`", name, "` is missing required column",
+         if (length(missing) > 1) "s" else "", ": ",
+         paste0("`", missing, "`", collapse = ", "), ".", call. = FALSE)
+  }
+  invisible(table)
+}
+
+require_drug_names <- function(table, name, columns) {
+  bad <- Reduce(`|`, lapply(columns, function(column) {
+    is.na(table[[column]]) | !nzchar(table[[column]])
+  }))
+  if (any(bad)) {
+    stop("`", name, "` has missing drug names in ",
+         paste0("`", columns, "`", collapse = "/"), " on row",
+         if (sum(bad) > 1) "s" else "", " ",
+         paste(which(bad), collapse = ", "), ".", call. = FALSE)
+  }
+  invisible(table)
+}
+
+require_estimate_values <- function(table, name) {
+  if (!is.numeric(table$estimate) || anyNA(table$estimate)) {
+    stop("`", name, "$estimate` must be numeric with no missing values.",
+         call. = FALSE)
+  }
+  bad_se <- !is.numeric(table$std_error) | is.na(table$std_error) |
+    table$std_error <= 0
+  if (any(bad_se)) {
+    stop("`", name, "$std_error` must be positive on every row; row",
+         if (sum(bad_se) > 1) "s" else "", " ",
+         paste(which(bad_se), collapse = ", "), " ",
+         if (sum(bad_se) > 1) "are" else "is", " not.", call. = FALSE)
+  }
+  invisible(table)
 }
 
 warn_on_estimand_differences <- function(comparisons) {

@@ -89,6 +89,28 @@ test_that("a low-noise simulation is recovered with near-nominal accuracy", {
   expect_identical(recovery$n_drugs, 39L)
 })
 
+test_that("recovery validation works on anchored fits too", {
+  skip_if_not_installed("netmeta")
+
+  simulation <- simulate_direct_effect_network(
+    n_drugs = 12, n_comparisons = 40, n_anchors = 3,
+    heterogeneity = 0, seed = 7, se_range = c(0.02, 0.06)
+  )
+  absolute <- anchor_surface(
+    fit_surface(simulation$network, engine = "netmeta")
+  )
+  recovery <- validate_recovery(absolute, simulation)
+
+  # Anchored fits compare directly against the absolute truth: no drug
+  # is pinned, so all twelve contribute, and nothing degenerates to NaN.
+  expect_identical(recovery$n_drugs, 12L)
+  expect_identical(recovery$reference, "placebo")
+  expect_false(is.nan(recovery$bias))
+  expect_lt(abs(recovery$bias), 0.05)
+  expect_lt(recovery$rmse, 0.1)
+  expect_gt(recovery$rank_correlation, 0.9)
+})
+
 test_that("validate_recovery validates its inputs", {
   simulation <- simulate_direct_effect_network(
     n_drugs = 4, n_comparisons = 8, n_anchors = 0, seed = 3

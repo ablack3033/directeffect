@@ -135,12 +135,14 @@ simulate_direct_effect_network <- function(n_drugs = 20,
 
 #' Measure how well a fit recovers simulation truth
 #'
-#' Compares a fitted surface against the known true effects of the
-#' simulation that generated its data. Works from the fit contract only,
-#' so it treats every engine identically. Because a surface fit is
-#' relative, the truth is re-centred at the fit's reference drug before
-#' comparison; the reference row itself (estimated as exactly 0 by
-#' construction) is excluded from bias, RMSE, and coverage.
+#' Compares a fit against the known true effects of the simulation that
+#' generated its data. Works from the fit contract only, so it treats
+#' every engine identically. For a surface fit the truth is re-centred
+#' at the fit's arbitrary reference drug before comparison, and the
+#' reference row itself (estimated as exactly 0 by construction) is
+#' excluded from bias, RMSE, and coverage. For an anchored fit
+#' (`reference = "placebo"`) the truth is already on the placebo = 0
+#' scale, so it is compared directly and every drug contributes.
 #'
 #' @param fit A `directeffect_fit` from [fit_surface()], fitted to
 #'   `simulation$network`.
@@ -163,10 +165,7 @@ simulate_direct_effect_network <- function(n_drugs = 20,
 #' }
 #' @export
 validate_recovery <- function(fit, simulation) {
-  if (!inherits(fit, "directeffect_fit")) {
-    stop("`fit` must be a `directeffect_fit` from `fit_surface()`.",
-         call. = FALSE)
-  }
+  assert_directeffect_fit(fit)
   if (!is.list(simulation) || is.null(simulation$truth)) {
     stop("`simulation` must be the result of ",
          "`simulate_direct_effect_network()` (it has no `truth`).",
@@ -186,9 +185,14 @@ validate_recovery <- function(fit, simulation) {
 
   reference <- effects$reference[1]
   theta_true <- truth$theta[match(effects$drug, truth$drug)]
-  theta_true <- theta_true - theta_true[effects$drug == reference]
-
-  free <- effects$drug != reference
+  if (identical(reference, "placebo")) {
+    # Anchored fit: truth is already absolute on the placebo = 0 scale,
+    # and no drug is pinned, so every drug contributes.
+    free <- rep(TRUE, nrow(effects))
+  } else {
+    theta_true <- theta_true - theta_true[effects$drug == reference]
+    free <- effects$drug != reference
+  }
   errors <- effects$estimate[free] - theta_true[free]
   covered <- effects$lower[free] <= theta_true[free] &
     theta_true[free] <= effects$upper[free]

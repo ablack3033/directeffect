@@ -29,3 +29,12 @@ still yields A, B > 0.5. Bug found on the way: rstan drops the array
 dimension of length-1 data (a single anchor), fixed with as.array() in
 both adapters. Anchored-ness is signalled by reference = "placebo" —
 the contract's component list is unchanged.
+
+Code-review addendum (spec axis): the frequentist offset follows the
+spec's wording literally — precision-weighted, adding offset variance
+to surface variance — but ignores the covariance between the surface
+estimate and the offset (both involve the anchored drug's surface
+position). With a single anchor this double-counts that drug's surface
+variance, making absolute intervals conservative rather than
+miscalibrated-narrow. Acceptable for v0.1; revisit with the v0.2
+robustness work if calibrated frequentist intervals matter.

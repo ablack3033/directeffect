@@ -38,12 +38,8 @@
 #' }
 #' @export
 compare_engines <- function(fit_a, fit_b) {
-  for (fit in list(fit_a, fit_b)) {
-    if (!inherits(fit, "directeffect_fit")) {
-      stop("`compare_engines()` expects two `directeffect_fit` objects ",
-           "from `fit_surface()`.", call. = FALSE)
-    }
-  }
+  assert_directeffect_fit(fit_a)
+  assert_directeffect_fit(fit_b)
 
   engines <- c(fit_a$engine, fit_b$engine)
   if (!setequal(engines, c("netmeta", "stan"))) {

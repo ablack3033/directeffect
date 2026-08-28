@@ -144,10 +144,7 @@ plot_sea_level <- function(fit, scale = c("log", "natural")) {
 }
 
 surface_plot_data <- function(fit, scale) {
-  if (!inherits(fit, "directeffect_fit")) {
-    stop("`fit` must be a `directeffect_fit` from `fit_surface()` or ",
-         "`anchor_surface()`.", call. = FALSE)
-  }
+  assert_directeffect_fit(fit)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("The surface plots require the ggplot2 package.", call. = FALSE)
   }
