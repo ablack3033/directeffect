@@ -89,8 +89,12 @@ plot_network(de)
 Surface fitting deliberately ignores the anchors and fixes an
 arbitrary reference drug at 0 — only relative positions are
 identified. Two independent engines are available, `"netmeta"`
-(frequentist) and `"stan"` (Bayesian); they fit the identical model
-and return the identical contract:
+(frequentist) and `"stan"` (Bayesian); for networks with one comparison
+per study — like this one — they fit the identical model, and they
+always return the identical contract. (Multi-arm trials, several
+comparisons sharing a `study_id`, are supported by the netmeta engine
+only; the Stan engine refuses them rather than mis-treat correlated
+rows as independent.)
 
 ```{r surface}
 surface <- fit_surface(de, engine = "netmeta")

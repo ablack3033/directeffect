@@ -18,6 +18,10 @@
 #'   `difference` (`stan_mean - netmeta`), and `standardized_difference`
 #'   (difference over the combined standard error; `NA` for the
 #'   reference drug, whose estimate is exact 0 in both engines).
+#'   `standardized_difference` is a yardstick for judging whether a
+#'   difference is large relative to the estimates' uncertainty, not a
+#'   test statistic: the two fits share the same data, so it has no
+#'   reference distribution.
 #'
 #' @examples
 #' comparisons <- data.frame(

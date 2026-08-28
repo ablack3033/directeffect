@@ -38,3 +38,16 @@ position). With a single anchor this double-counts that drug's surface
 variance, making absolute intervals conservative rather than
 miscalibrated-narrow. Acceptable for v0.1; revisit with the v0.2
 robustness work if calibrated frequentist intervals matter.
+
+> **SUPERSEDED (2026-08-28)** by the statistical review
+> (`.scratch/reviews/2026-08-28-stats-review.md`) and
+> v0.1-uncertainty-fixes ticket 02. The review *measured* the deferral's
+> cost on the package's own mandatory example: the anchored drug's SE
+> was 76% too wide (0.0702 reported vs a true sampling SD of 0.0400),
+> nominal 95% intervals covered at up to 99.9%, and the two engines
+> silently disagreed about anchored uncertainty — "conservative" was in
+> fact miscalibrated, and only on the frequentist path.
+> `anchor_surface()` now propagates the full surface covariance
+> (`Var(theta_d) + Var(offset) + 2 Cov(theta_d, offset)`), guarded by a
+> joint-GLS oracle, a Monte Carlo coverage test, and an SE-level
+> engine-equivalence test.

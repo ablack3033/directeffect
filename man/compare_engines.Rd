@@ -20,6 +20,10 @@ frequentist estimate), \code{stan_mean} (the posterior mean),
 \code{difference} (\code{stan_mean - netmeta}), and \code{standardized_difference}
 (difference over the combined standard error; \code{NA} for the
 reference drug, whose estimate is exact 0 in both engines).
+\code{standardized_difference} is a yardstick for judging whether a
+difference is large relative to the estimates' uncertainty, not a
+test statistic: the two fits share the same data, so it has no
+reference distribution.
 
 \code{plot_engine_comparison()} returns a ggplot of the netmeta
 estimates against the Stan posterior means with the identity line

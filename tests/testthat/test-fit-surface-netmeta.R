@@ -43,8 +43,8 @@ test_that("the fit carries the full component contract", {
 
   expect_identical(
     names(fit),
-    c("effects", "comparisons", "anchors", "heterogeneity", "diagnostics",
-      "engine", "engine_fit", "network")
+    c("effects", "covariance", "comparisons", "anchors", "heterogeneity",
+      "diagnostics", "engine", "engine_fit", "network")
   )
   expect_identical(fit$engine, "netmeta")
   expect_identical(fit$comparisons, de$comparisons)
@@ -54,6 +54,45 @@ test_that("the fit carries the full component contract", {
   expect_s3_class(fit$network, "directeffect_network")
   # engine_fit is the sole escape hatch for engine internals
   expect_s3_class(fit$engine_fit, "netmeta")
+})
+
+test_that("the surface covariance matches the WLS oracle, full matrix", {
+  skip_if_not_installed("netmeta")
+
+  comparisons <- asymmetric_comparisons()
+  drugs <- c("A", "B", "C", "D")
+  de <- direct_effect_network(comparisons, effect_measure = "HR")
+  fit <- fit_surface(de, engine = "netmeta", reference = "B")
+
+  expect_identical(dimnames(fit$covariance), list(drugs, drugs))
+
+  oracle <- wls_surface(comparisons, drugs, "B")
+  expect_equal(fit$covariance, oracle$covariance, tolerance = 1e-8)
+
+  # The reference's row and column are exact zeros, and the diagonal is
+  # consistent with the effects table's standard errors.
+  expect_identical(unname(fit$covariance["B", ]), rep(0, 4))
+  expect_identical(unname(fit$covariance[, "B"]), rep(0, 4))
+  expect_equal(sqrt(diag(fit$covariance)),
+               stats::setNames(fit$effects$std_error, fit$effects$drug),
+               tolerance = 1e-10)
+})
+
+test_that("a three-arm trial keeps the trial's own contrast SE in netmeta", {
+  skip_if_not_installed("netmeta")
+
+  de <- suppressWarnings(
+    direct_effect_network(three_arm_comparisons(), effect_measure = "HR")
+  )
+  fit <- fit_surface(de, engine = "netmeta", reference = "A")
+
+  # A single three-arm trial with contrast SE 0.1 must yield network
+  # estimates with exactly that SE; the sqrt(2/3)-deflated answer of an
+  # independence likelihood (0.0816) must not be reachable.
+  free <- fit$effects[fit$effects$drug != "A", ]
+  expect_equal(free$std_error, c(0.1, 0.1), tolerance = 1e-6)
+  expect_equal(sqrt(diag(fit$covariance))[c("B", "C")],
+               c(B = 0.1, C = 0.1), tolerance = 1e-6)
 })
 
 test_that("anchors are deliberately ignored by surface fitting", {

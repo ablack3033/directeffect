@@ -128,6 +128,33 @@ test_that("differing estimand metadata triggers a warning", {
   expect_no_warning(direct_effect_network(consistent))
 })
 
+test_that("multi-arm studies are announced at construction, by name", {
+  warnings <- collect_warnings(
+    direct_effect_network(three_arm_comparisons(), effect_measure = "HR")
+  )
+  expect_true(any(grepl("\"T1\"", warnings)))
+  expect_true(any(grepl("multi-arm", warnings)))
+  # The warning states what differs between the engines for such input.
+  expect_true(any(grepl("netmeta", warnings) & grepl("stan", warnings)))
+
+  # Two multi-arm studies are both named.
+  doubled <- rbind(
+    three_arm_comparisons(),
+    data.frame(study_id = c("T2", "T2"), target = c("C", "C"),
+               comparator = c("D", "E"), estimate = c(0.1, 0.2),
+               std_error = c(0.1, 0.1))
+  )
+  warnings <- collect_warnings(
+    direct_effect_network(doubled, effect_measure = "HR")
+  )
+  expect_true(any(grepl("\"T1\", \"T2\"", warnings)))
+
+  # One comparison per study stays silent.
+  expect_no_warning(
+    direct_effect_network(spec_comparisons(), effect_measure = "HR")
+  )
+})
+
 test_that("print method summarises the network", {
   de <- direct_effect_network(spec_comparisons(), anchors = spec_anchors(),
                               effect_measure = "HR")

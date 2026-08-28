@@ -11,16 +11,36 @@ edge_residuals(fit)
 }
 \value{
 A data frame with columns \code{target}, \code{comparator}, \code{observed},
-\code{predicted}, \code{residual}, and \code{standardized_residual}, one row per
-comparison in \code{fit$comparisons} order.
+\code{predicted}, \code{residual}, \code{standardized_residual} (\code{NA} on bridge
+comparisons), and \code{leverage}, one row per comparison in
+\code{fit$comparisons} order.
 }
 \description{
 For every observed comparison, reports the observed effect, the
-effect predicted from the fitted surface (\code{theta_target - theta_comparator}), their difference, and that difference divided by
-the comparison's standard error. Large standardized residuals mark
-comparisons that conflict with the surface implied by the rest of the
-network. Consumes only the fit contract, so every engine is treated
-identically. Rows align with \code{fit$comparisons}.
+effect predicted from the fitted surface (\code{theta_target - theta_comparator}), their difference, that difference divided by the
+residual's actual standard deviation, and the comparison's leverage.
+Large standardized residuals mark comparisons that conflict with the
+surface implied by the rest of the network. Consumes only the fit
+contract, so every engine is treated identically. Rows align with
+\code{fit$comparisons}.
+}
+\details{
+The standardization divides by the residual's actual standard
+deviation \code{sqrt(se^2 - Var(predicted))}, not the raw comparison
+standard error: the prediction is partly built from the observation
+itself, so the residual varies less than the observation does.
+Standardized this way, the residuals have unit variance under
+coherence. \code{leverage} (\code{Var(predicted) / se^2}) says how much of the
+comparison's variance is absorbed by its own prediction.
+
+A bridge comparison — the only evidence connecting its endpoints,
+with leverage 1 — determines its own prediction completely: nothing
+in the network can corroborate or contradict it. Its standardized
+residual is reported as \code{NA}, never as a reassuring 0:
+"uncheckable" is not "perfectly consistent". Interpret large
+standardized residuals as conflict only on comparisons with leverage
+clearly below 1; an \code{NA} row is uncorroborated evidence whose
+correctness the network cannot assess.
 }
 \examples{
 comparisons <- data.frame(

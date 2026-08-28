@@ -15,7 +15,9 @@ to the fit's network.}
 
 \item{...}{Passed to \code{rstan::sampling()} when re-fitting with the
 anchored Stan model (\code{chains}, \code{iter}, \code{seed}, ...). Unused by the
-frequentist path.}
+frequentist path. As in \code{\link[=fit_surface]{fit_surface()}}, when no \code{seed} is supplied
+the sampler is seeded from the wall clock and process id and the
+caller's global random-number state is left untouched.}
 }
 \value{
 A \code{directeffect_fit} whose effects are absolute:
@@ -34,9 +36,23 @@ interval.
 The Bayesian path refits the network with the anchored Stan model, in
 which no arbitrary identification constraint exists — the anchors
 determine the absolute location. The frequentist path estimates the
-single precision-weighted location offset that best reconciles the
-fitted surface with the anchors, propagating both surface and anchor
-uncertainty.
+single location offset that best reconciles the fitted surface with
+the anchors by generalized least squares over the anchors' proposals,
+whose covariance combines the anchor variances with the surface
+covariance of the anchored drugs. Every absolute variance is
+\verb{Var(theta_d) + Var(offset) + 2 Cov(theta_d, offset)}, computed from
+the fit's full surface covariance, so the absolute standard errors
+equal the actual sampling variability of the estimator. With a single
+anchor the anchored drug's surface contribution cancels exactly: its
+absolute standard error is its anchor's standard error, and the whole
+fit equals the joint generalized-least-squares solution of
+comparisons plus anchor rows — the same answer the anchored Stan
+model gives. With several disagreeing anchors the offset and its
+variance still equal that joint solution at the surface's reference
+drug, but the joint (Bayesian) fit also lets the anchors update the
+drugs' relative positions, which a location shift by design does
+not; the frequentist path then reports the honest — slightly larger
+— sampling variance of its own estimator.
 
 A fit whose network component has no anchor cannot be positioned:
 \code{anchor_surface()} refuses rather than silently picking a sea level.

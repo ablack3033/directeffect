@@ -27,11 +27,17 @@ estimates, in two deliberately separate steps:
 
 Two independent estimation engines — frequentist
 ([netmeta](https://cran.r-project.org/package=netmeta)) and Bayesian
-(Stan via rstan) — fit the identical model behind one interface and
-are required by the test suite to reconstruct the same surface, so the
-implementations continuously validate each other. Diagnostics (edge
-residuals, cycle consistency, connectivity/identifiability reports)
-and plots come built in.
+(Stan via rstan) — sit behind one interface and are required by the
+test suite to reconstruct the same surface, estimates and standard
+errors alike, so the implementations continuously validate each other.
+For networks with one comparison per study the two engines fit the
+identical likelihood; multi-arm trials (several comparisons sharing a
+`study_id`) are supported by the netmeta engine only in this version —
+netmeta models the within-study correlation, and the Stan engine
+refuses such networks rather than mis-treat correlated rows as
+independent. Diagnostics (leverage-aware edge residuals, cycle
+consistency, connectivity/identifiability reports) and plots come
+built in.
 
 ## Installation
 

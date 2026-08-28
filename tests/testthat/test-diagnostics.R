@@ -30,12 +30,85 @@ test_that("edge residuals have the ticket schema and vanish on consistent data",
   expect_identical(
     names(residuals),
     c("target", "comparator", "observed", "predicted", "residual",
-      "standardized_residual")
+      "standardized_residual", "leverage")
   )
   expect_identical(nrow(residuals), 3L)
   expect_equal(residuals$residual, rep(0, 3), tolerance = 1e-8)
   expect_equal(residuals$standardized_residual, rep(0, 3),
                tolerance = 1e-6)
+  # Each edge of the equal-precision triangle absorbs 2/3 of its own
+  # variance into its prediction.
+  expect_equal(residuals$leverage, rep(2 / 3, 3), tolerance = 1e-8)
+})
+
+test_that("standardized residuals match the hat-matrix oracle", {
+  skip_if_not_installed("netmeta")
+
+  comparisons <- asymmetric_comparisons()
+  fit <- netmeta_fit(comparisons)
+  residuals <- edge_residuals(fit)
+
+  # Independent oracle from the weighted normal equations: the hat
+  # matrix H = X (X'WX)^-1 X' W gives leverage as diag(H) and the
+  # residual covariance as (I - H) V (I - H)'.
+  oracle <- wls_surface(comparisons, c("A", "B", "C", "D"), "A")
+  X <- oracle$design
+  W <- oracle$weights
+  V <- diag(comparisons$std_error^2)
+  H <- X %*% solve(t(X) %*% W %*% X) %*% t(X) %*% W
+  residual_cov <- (diag(5) - H) %*% V %*% t(diag(5) - H)
+
+  expect_equal(residuals$leverage, unname(diag(H)), tolerance = 1e-8)
+  expect_equal(residuals$standardized_residual,
+               residuals$residual / sqrt(diag(residual_cov)),
+               tolerance = 1e-8)
+})
+
+test_that("a bridge comparison is NA with leverage 1, never 'consistent'", {
+  skip_if_not_installed("netmeta")
+
+  bridge_residuals <- function(cd_estimate) {
+    comparisons <- data.frame(
+      study_id   = c("S1", "S2", "S3", "S4"),
+      target     = c("A", "A", "B", "C"),
+      comparator = c("B", "C", "C", "D"),
+      estimate   = c(0.1, 0.3, 0.25, cd_estimate),
+      std_error  = c(0.05, 0.05, 0.05, 0.05)
+    )
+    edge_residuals(netmeta_fit(comparisons))
+  }
+
+  # Whatever the bridge's estimate, it reports leverage 1 and NA —
+  # uncorroborated, not perfectly consistent (the old standardization
+  # returned exactly 0 here).
+  for (cd_estimate in c(0.2, 5.0)) {
+    residuals <- bridge_residuals(cd_estimate)
+    bridge_row <- residuals[residuals$target == "C" &
+                              residuals$comparator == "D", ]
+    expect_equal(bridge_row$leverage, 1, tolerance = 1e-8)
+    expect_true(is.na(bridge_row$standardized_residual))
+    # The cycle edges stay checkable.
+    expect_true(all(!is.na(
+      residuals$standardized_residual[residuals$comparator != "D"]
+    )))
+  }
+})
+
+test_that("diagnostics announce the independence assumption on multi-arm input", {
+  skip_if_not_installed("netmeta")
+
+  de <- suppressWarnings(
+    direct_effect_network(three_arm_comparisons(), effect_measure = "HR")
+  )
+  fit <- fit_surface(de, engine = "netmeta")
+
+  expect_warning(edge_residuals(fit), "independent comparisons")
+  expect_warning(cycle_consistency(fit), "independent comparisons")
+
+  # One comparison per study: no such warning.
+  quiet_fit <- netmeta_fit(consistent_comparisons())
+  expect_no_warning(edge_residuals(quiet_fit))
+  expect_no_warning(cycle_consistency(quiet_fit))
 })
 
 test_that("cycle sums are ~ 0 on a consistent network", {
@@ -129,4 +202,9 @@ test_that("cycle consistency plot is a ggplot", {
 test_that("diagnostics validate their input", {
   expect_error(edge_residuals(data.frame()), "directeffect_fit")
   expect_error(cycle_consistency(data.frame()), "directeffect_fit")
+
+  skip_if_not_installed("netmeta")
+  legacy <- netmeta_fit(consistent_comparisons())
+  legacy$covariance <- NULL
+  expect_error(edge_residuals(legacy), "covariance")
 })

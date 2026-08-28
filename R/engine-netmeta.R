@@ -44,9 +44,31 @@ fit_surface_netmeta <- function(de, reference) {
 
   new_directeffect_fit(
     effects = effects,
+    covariance = netmeta_surface_covariance(nm, drugs, reference),
     heterogeneity = heterogeneity,
     engine = "netmeta",
     engine_fit = nm,
     network = de
   )
+}
+
+# Common-effect covariance of every drug's estimate versus the
+# reference, from netmeta's Moore-Penrose pseudoinverse of the weighted
+# Laplacian: Cov(theta_i - theta_r, theta_j - theta_r) =
+# L+_ij - L+_ir - L+_rj + L+_rr. Unlike Cov.common (indexed by
+# comparison pair labels, with orientation-dependent signs), L+ is
+# indexed by treatment, so no sign bookkeeping is needed, and it
+# reflects netmeta's multi-arm variance adjustments.
+netmeta_surface_covariance <- function(nm, drugs, reference) {
+  lp <- nm$Lplus.matrix.common[drugs, drugs, drop = FALSE]
+  covariance <- lp -
+    outer(lp[, reference], rep(1, length(drugs))) -
+    outer(rep(1, length(drugs)), lp[reference, ]) +
+    lp[reference, reference]
+  # The reference is pinned at exactly 0, so its row and column are
+  # exact zeros by the contract, not merely zero to machine precision.
+  covariance[reference, ] <- 0
+  covariance[, reference] <- 0
+  dimnames(covariance) <- list(drugs, drugs)
+  covariance
 }

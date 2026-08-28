@@ -111,6 +111,37 @@ test_that("recovery validation works on anchored fits too", {
   expect_gt(recovery$rank_correlation, 0.9)
 })
 
+test_that("rank correlation covers the free drugs only, like the other metrics", {
+  skip_if_not_installed("netmeta")
+
+  # A small noisy network where including the pinned reference's exact
+  # (0, 0) pair demonstrably moves Spearman's rho (the case from the
+  # 2026-08-28 review): the free-drugs ranking is perfect while the
+  # all-drugs computation is not.
+  simulation <- simulate_direct_effect_network(
+    n_drugs = 6, n_comparisons = 10, n_anchors = 0, heterogeneity = 0,
+    seed = 8
+  )
+  fit <- fit_surface(simulation$network, engine = "netmeta")
+  recovery <- validate_recovery(fit, simulation)
+
+  truth <- simulation$truth
+  reference <- fit$effects$reference[1]
+  theta_true <- truth$theta[match(fit$effects$drug, truth$drug)]
+  theta_true <- theta_true - theta_true[fit$effects$drug == reference]
+  free <- fit$effects$drug != reference
+
+  hand_free <- stats::cor(fit$effects$estimate[free], theta_true[free],
+                          method = "spearman")
+  hand_all <- stats::cor(fit$effects$estimate, theta_true,
+                         method = "spearman")
+
+  expect_equal(recovery$rank_correlation, hand_free, tolerance = 1e-10)
+  # The chosen seed separates the two definitions, so this test fails
+  # under the old all-drugs computation.
+  expect_false(isTRUE(all.equal(hand_all, hand_free)))
+})
+
 test_that("validate_recovery validates its inputs", {
   simulation <- simulate_direct_effect_network(
     n_drugs = 4, n_comparisons = 8, n_anchors = 0, seed = 3

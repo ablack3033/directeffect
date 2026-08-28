@@ -57,6 +57,7 @@ direct_effect_network <- function(comparisons, anchors = NULL,
   }
 
   warn_on_estimand_differences(comparisons)
+  warn_on_multiarm_studies(comparisons)
 
   treatments <- sort(unique(c(comparisons$target, comparisons$comparator)))
   graph <- build_network_graph(comparisons, treatments)
@@ -225,6 +226,41 @@ warn_on_estimand_differences <- function(comparisons) {
             call. = FALSE)
   }
   invisible(differing)
+}
+
+# Studies contributing more than one comparison row: multi-arm trials,
+# whose within-study contrasts share arms and are therefore correlated.
+multiarm_studies <- function(comparisons) {
+  counts <- table(comparisons$study_id)
+  names(counts)[counts > 1]
+}
+
+# "study \"T1\" contributes" / "studies \"T1\", \"T2\" contribute" —
+# the subject clause shared by every multi-arm warning and refusal.
+multiarm_clause <- function(studies) {
+  paste0("stud", if (length(studies) > 1) "ies " else "y ",
+         paste0("\"", studies, "\"", collapse = ", "),
+         " contribute", if (length(studies) > 1) "" else "s")
+}
+
+# Multi-arm evidence is territory the two engines treat differently:
+# netmeta models the within-study covariance correctly, while the Stan
+# likelihood (which assumes independent rows) refuses to fit it. Say so
+# at construction, before anything is fitted.
+warn_on_multiarm_studies <- function(comparisons) {
+  studies <- multiarm_studies(comparisons)
+  if (length(studies) > 0) {
+    clause <- multiarm_clause(studies)
+    warning(toupper(substring(clause, 1, 1)), substring(clause, 2),
+            " more than one comparison (a multi-arm trial). The ",
+            "engines treat such input differently: the \"netmeta\" ",
+            "engine models the correlation between contrasts sharing ",
+            "an arm correctly, while the \"stan\" engine's ",
+            "independence likelihood does not and will refuse to fit ",
+            "this network. Diagnostics that assume independent ",
+            "comparisons warn separately.", call. = FALSE)
+  }
+  invisible(studies)
 }
 
 # Per-drug attributes derived from the network: how many comparisons

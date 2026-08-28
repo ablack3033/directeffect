@@ -140,9 +140,11 @@ simulate_direct_effect_network <- function(n_drugs = 20,
 #' every engine identically. For a surface fit the truth is re-centred
 #' at the fit's arbitrary reference drug before comparison, and the
 #' reference row itself (estimated as exactly 0 by construction) is
-#' excluded from bias, RMSE, and coverage. For an anchored fit
-#' (`reference = "placebo"`) the truth is already on the placebo = 0
-#' scale, so it is compared directly and every drug contributes.
+#' excluded from all four metrics — bias, RMSE, coverage, and rank
+#' correlation — so its phantom exact (0, 0) pair cannot flatter any of
+#' them. For an anchored fit (`reference = "placebo"`) the truth is
+#' already on the placebo = 0 scale, so it is compared directly and
+#' every drug contributes.
 #'
 #' @param fit A `directeffect_fit` from [fit_surface()], fitted to
 #'   `simulation$network`.
@@ -201,7 +203,8 @@ validate_recovery <- function(fit, simulation) {
     bias = mean(errors),
     rmse = sqrt(mean(errors^2)),
     coverage = mean(covered),
-    rank_correlation = stats::cor(effects$estimate, theta_true,
+    rank_correlation = stats::cor(effects$estimate[free],
+                                  theta_true[free],
                                   method = "spearman"),
     n_drugs = sum(free),
     reference = reference

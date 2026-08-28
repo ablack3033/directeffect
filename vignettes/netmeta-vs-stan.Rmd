@@ -19,14 +19,19 @@ knitr::opts_chunk$set(
 
 The v0.1 goal of directeffect, verbatim from its design: *demonstrate
 that the same direct-effect surface is reconstructed independently by
-netmeta and Stan.* Both engines fit the identical common-effect model
+netmeta and Stan.* For networks with one comparison per study — the
+example data here included — both engines fit the identical
+common-effect model
 
 $$y_k \sim N(\theta_{\text{target}[k]} - \theta_{\text{comparator}[k]},\; se_k^2)$$
 
 — netmeta by frequentist network meta-analysis, Stan by MCMC under a
 deliberately weak `normal(0, 5)` prior so the comparison is meaningful.
 If two independent implementations agree, an error in either would have
-to be an error in both.
+to be an error in both. (Multi-arm trials, whose comparisons are
+correlated within a study, are the one place the engines differ:
+netmeta models that correlation, and the Stan engine refuses such
+networks rather than treat the rows as independent.)
 
 ## Fit both engines
 
@@ -78,9 +83,11 @@ consequence.
 
 This is not just a vignette exercise: the package's test suite
 simulates a network under the model's own assumptions and requires
-every per-drug difference between the engines to stay below 0.02 on the
-log scale, on every commit, in CI. The two implementations validate
-each other from day one.
+every per-drug difference between the engines' estimates to stay below
+0.02 on the log scale — and every difference between their standard
+errors below 0.01 — on surface and anchored fits alike, on every
+commit, in CI. The two implementations validate each other's
+uncertainty as well as their point estimates.
 
 Anchoring works on either engine as well — the Bayesian path refits
 with a separate anchored Stan model in which the anchors (not an

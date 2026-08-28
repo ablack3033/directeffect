@@ -36,9 +36,14 @@ fit <- fit_surface(de, engine = "netmeta")
 
 For every comparison: the observed effect, the effect the fitted
 surface predicts (`theta_target - theta_comparator`), and their
-difference standardized by the comparison's standard error. Large
-standardized residuals mark comparisons that conflict with the rest of
-the network.
+difference standardized by the residual's actual standard deviation —
+which is smaller than the comparison's standard error, because the
+prediction is partly built from the observation itself. The `leverage`
+column says how much (at leverage 1, a *bridge* comparison nothing
+else can corroborate, the standardized residual is reported as `NA`
+rather than as a falsely reassuring 0; this network has no bridges).
+Large standardized residuals mark comparisons that conflict with the
+rest of the network.
 
 ```{r residuals}
 residuals <- edge_residuals(fit)

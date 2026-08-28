@@ -12,23 +12,33 @@
 #'   [direct_effect_network()]. Must be a single connected component; fit
 #'   components separately (see [check_connectivity()]) otherwise.
 #' @param engine `"netmeta"` (frequentist network meta-analysis) or
-#'   `"stan"` (Bayesian, identical likelihood). Both engines fit the same
-#'   common-effect model `y_k ~ N(theta_target - theta_comparator,
-#'   se_k^2)` and return the same fit contract.
+#'   `"stan"` (Bayesian). For networks with one comparison per study,
+#'   both engines fit the identical common-effect likelihood
+#'   `y_k ~ N(theta_target - theta_comparator, se_k^2)` and return the
+#'   same fit contract. Multi-arm evidence (several comparisons sharing
+#'   a `study_id`) is supported by the `"netmeta"` engine only in this
+#'   version: netmeta models the correlation between contrasts sharing
+#'   an arm, while the Stan engine refuses such networks rather than
+#'   mis-treat the rows as independent.
 #' @param reference Drug fixed at 0 for identification. Defaults to the
 #'   first treatment alphabetically. The choice is arbitrary and does not
 #'   affect any estimated difference between drugs.
 #' @param ... Engine-specific options. The Stan engine accepts `chains`
 #'   (default 4), `iter` (default 2000), `seed`, `refresh` (default 0),
-#'   and any further argument to `rstan::sampling()`. The netmeta engine
-#'   accepts none.
+#'   and any further argument to `rstan::sampling()`. When no `seed` is
+#'   supplied the sampler is seeded from the wall clock and process id;
+#'   in either case the caller's global random-number state is left
+#'   untouched, so fitting never disturbs the session's
+#'   reproducibility. The netmeta engine accepts none.
 #'
 #' @return An object of class `directeffect_fit` with components
 #'   `effects` (tidy per-drug table: `drug`, `estimate`, `std_error`,
-#'   `lower`, `upper`, `scale`, `reference`, `engine`), `comparisons`,
-#'   `anchors`, `heterogeneity`, `diagnostics`, `engine`, `engine_fit`
-#'   (the raw engine object — the only place engine internals appear),
-#'   and `network`.
+#'   `lower`, `upper`, `scale`, `reference`, `engine`), `covariance`
+#'   (the full covariance of the estimated effects; see
+#'   [directeffect_formats]), `comparisons`, `anchors`,
+#'   `heterogeneity`, `diagnostics`, `engine`, `engine_fit` (the raw
+#'   engine object — the only place engine internals appear), and
+#'   `network`.
 #'
 #' @seealso [directeffect_formats] for the explicit schema of every
 #'   column in the effects table and the other fit components.
@@ -90,11 +100,20 @@ assert_directeffect_fit <- function(fit) {
 
 # Assemble the engine-agnostic fit object. Every engine adapter funnels
 # through this constructor so the contract stays in one place.
-new_directeffect_fit <- function(effects, heterogeneity, engine,
-                                 engine_fit, network) {
+# `covariance` is the full covariance of the estimated effects (drug x
+# drug, rows and columns in effects-table order): the common-effect
+# covariance versus the reference (netmeta), or the posterior covariance
+# of theta (Stan). For an unanchored fit the reference drug's row and
+# column are exact zeros; an anchored fit pins no drug, so no row is
+# zero.
+new_directeffect_fit <- function(effects, covariance, heterogeneity,
+                                 engine, engine_fit, network) {
+  stopifnot(identical(dimnames(covariance),
+                      list(effects$drug, effects$drug)))
   structure(
     list(
       effects = effects,
+      covariance = covariance,
       comparisons = network$comparisons,
       anchors = network$anchors,
       heterogeneity = heterogeneity,
@@ -105,6 +124,17 @@ new_directeffect_fit <- function(effects, heterogeneity, engine,
     ),
     class = "directeffect_fit"
   )
+}
+
+# Shared guard for consumers of the covariance component: a fit built by
+# any current engine adapter always carries it, but fail helpfully on an
+# object constructed before the component existed.
+assert_fit_covariance <- function(fit, caller) {
+  if (is.null(fit$covariance)) {
+    stop("`fit` carries no `covariance` component, which `", caller,
+         "` needs; refit with `fit_surface()`.", call. = FALSE)
+  }
+  invisible(fit)
 }
 
 #' @export

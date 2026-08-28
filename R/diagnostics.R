@@ -2,17 +2,36 @@
 #'
 #' For every observed comparison, reports the observed effect, the
 #' effect predicted from the fitted surface (`theta_target -
-#' theta_comparator`), their difference, and that difference divided by
-#' the comparison's standard error. Large standardized residuals mark
-#' comparisons that conflict with the surface implied by the rest of the
-#' network. Consumes only the fit contract, so every engine is treated
-#' identically. Rows align with `fit$comparisons`.
+#' theta_comparator`), their difference, that difference divided by the
+#' residual's actual standard deviation, and the comparison's leverage.
+#' Large standardized residuals mark comparisons that conflict with the
+#' surface implied by the rest of the network. Consumes only the fit
+#' contract, so every engine is treated identically. Rows align with
+#' `fit$comparisons`.
+#'
+#' The standardization divides by the residual's actual standard
+#' deviation `sqrt(se^2 - Var(predicted))`, not the raw comparison
+#' standard error: the prediction is partly built from the observation
+#' itself, so the residual varies less than the observation does.
+#' Standardized this way, the residuals have unit variance under
+#' coherence. `leverage` (`Var(predicted) / se^2`) says how much of the
+#' comparison's variance is absorbed by its own prediction.
+#'
+#' A bridge comparison — the only evidence connecting its endpoints,
+#' with leverage 1 — determines its own prediction completely: nothing
+#' in the network can corroborate or contradict it. Its standardized
+#' residual is reported as `NA`, never as a reassuring 0:
+#' "uncheckable" is not "perfectly consistent". Interpret large
+#' standardized residuals as conflict only on comparisons with leverage
+#' clearly below 1; an `NA` row is uncorroborated evidence whose
+#' correctness the network cannot assess.
 #'
 #' @param fit A `directeffect_fit` from [fit_surface()].
 #'
 #' @return A data frame with columns `target`, `comparator`, `observed`,
-#'   `predicted`, `residual`, and `standardized_residual`, one row per
-#'   comparison in `fit$comparisons` order.
+#'   `predicted`, `residual`, `standardized_residual` (`NA` on bridge
+#'   comparisons), and `leverage`, one row per comparison in
+#'   `fit$comparisons` order.
 #'
 #' @examples
 #' comparisons <- data.frame(
@@ -30,6 +49,9 @@
 #' @export
 edge_residuals <- function(fit) {
   assert_directeffect_fit(fit)
+  assert_fit_covariance(fit, "edge_residuals()")
+  warn_on_multiarm_diagnostic(fit$comparisons, "edge_residuals()",
+                              "residual variances")
 
   comparisons <- fit$comparisons
   theta <- stats::setNames(fit$effects$estimate, fit$effects$drug)
@@ -37,13 +59,33 @@ edge_residuals <- function(fit) {
                         theta[comparisons$comparator])
   residual <- comparisons$estimate - predicted
 
+  covariance <- fit$covariance
+  target <- comparisons$target
+  comparator <- comparisons$comparator
+  predicted_var <- covariance[cbind(target, target)] +
+    covariance[cbind(comparator, comparator)] -
+    2 * covariance[cbind(target, comparator)]
+  variance <- comparisons$std_error^2
+  leverage <- predicted_var / variance
+
+  # Bridges are identified structurally (removing the row disconnects
+  # its endpoints), not by thresholding leverage: exact for either
+  # engine, immune to the Monte Carlo noise in a posterior covariance.
+  residual_var <- variance - predicted_var
+  bridge <- seq_len(nrow(comparisons)) %in%
+    as.integer(igraph::bridges(fit$network$graph))
+  standardized <- ifelse(!bridge & residual_var > 0,
+                         residual / sqrt(pmax(residual_var, 0)),
+                         NA_real_)
+
   data.frame(
-    target = comparisons$target,
-    comparator = comparisons$comparator,
+    target = target,
+    comparator = comparator,
     observed = comparisons$estimate,
     predicted = predicted,
     residual = residual,
-    standardized_residual = residual / comparisons$std_error,
+    standardized_residual = standardized,
+    leverage = leverage,
     row.names = NULL
   )
 }
@@ -81,6 +123,8 @@ edge_residuals <- function(fit) {
 #' @export
 cycle_consistency <- function(fit) {
   assert_directeffect_fit(fit)
+  warn_on_multiarm_diagnostic(fit$comparisons, "cycle_consistency()",
+                              "pooled edge variances")
 
   pooled <- pool_parallel_edges(fit$comparisons)
   treatments <- fit$network$treatments
@@ -145,6 +189,23 @@ plot_cycle_consistency <- function(fit) {
       title = "Cycle consistency",
       subtitle = "Under a coherent surface every cycle sum is ~ 0"
     )
+}
+
+# The diagnostics in this file take comparison rows as independent;
+# rows sharing a study (a multi-arm trial) are not, so the variances
+# they compute are then approximations. Announce the violated
+# assumption instead of approximating silently.
+warn_on_multiarm_diagnostic <- function(comparisons, caller, what) {
+  studies <- multiarm_studies(comparisons)
+  if (length(studies) > 0) {
+    warning("`", caller, "` assumes independent comparisons, but ",
+            multiarm_clause(studies),
+            " more than one (a multi-arm trial), so its ", what,
+            " ignore the correlation between contrasts sharing an arm. ",
+            "Interpret this diagnostic cautiously on multi-arm ",
+            "networks.", call. = FALSE)
+  }
+  invisible(studies)
 }
 
 # One row per unordered drug pair: the precision-weighted pooled

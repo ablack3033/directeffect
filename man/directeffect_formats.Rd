@@ -89,6 +89,21 @@ append the posterior summary columns \code{median}, \code{mean}, \code{sd}, \cod
 a sampled quantity).
 }
 
+\section{The covariance component (output, \code{fit$covariance})}{
+
+Every fit carries the full covariance matrix of its estimated
+effects: one row and column per drug, in the same order as the
+effects table, with \code{dimnames} naming the drugs. Both engines supply
+the same component in the same shape — the common-effect covariance
+of every drug versus the reference (netmeta) or the posterior
+covariance of \code{theta} (Stan) — and its diagonal is consistent with
+the effects table's \code{std_error} column. In an unanchored fit the
+reference drug's row and column are exact zeros (the reference is a
+constant); an anchored fit pins no drug, so no row is zero.
+Anchoring and the leverage-aware residual standardization consume
+this component.
+}
+
 \section{The other fit components (output)}{
 
 A \code{directeffect_fit} also carries \code{comparisons} and \code{anchors} (the
@@ -107,15 +122,20 @@ and \code{network} (the \code{directeffect_network} that was fitted).
 \code{absolute_identifiable}.}
 \item{\code{\link[=edge_residuals]{edge_residuals()}}}{One row per comparison, aligned with
 \code{fit$comparisons}: \code{target}, \code{comparator}, \code{observed},
-\code{predicted}, \code{residual}, \code{standardized_residual}.}
+\code{predicted}, \code{residual}, \code{standardized_residual} (divided by the
+residual's actual standard deviation; \code{NA} on a bridge
+comparison, which nothing can corroborate), \code{leverage}.}
 \item{\code{\link[=cycle_consistency]{cycle_consistency()}}}{One row per basis cycle: \code{cycle},
 \code{n_edges}, \code{inconsistency}, \code{std_error}, \code{z}. Zero rows when the
 network has no cycles.}
 \item{\code{\link[=compare_engines]{compare_engines()}}}{One row per drug: \code{drug}, \code{netmeta},
 \code{stan_mean}, \code{difference}, \code{standardized_difference} (\code{NA} where
-both engines pin the reference exactly).}
+both engines pin the reference exactly; a yardstick, not a test
+statistic — the two fits share the same data).}
 \item{\code{\link[=validate_recovery]{validate_recovery()}}}{A list: \code{bias}, \code{rmse}, \code{coverage},
-\code{rank_correlation}, \code{n_drugs}, \code{reference}.}
+\code{rank_correlation}, \code{n_drugs}, \code{reference}. For a surface fit
+all four metrics cover the free drugs only (the pinned reference
+row is excluded).}
 }
 }
 

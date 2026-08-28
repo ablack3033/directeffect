@@ -9,6 +9,14 @@
 # discrepancy.
 EPSILON <- 0.02
 
+# The same claim for uncertainty: frequentist standard errors and Stan
+# posterior SDs must agree per drug. The SDs here are ~0.05-0.15 with an
+# MCSE of sd / sqrt(2 * ESS) ~ 0.002 at iter = 4000 (bulk ESS in the
+# thousands); 0.01 leaves a wide margin while failing on any real
+# divergence (the anchoring defect this guards against was 0.03, and a
+# sqrt(2/3) deflation of these SEs is ~0.02-0.04).
+SE_EPSILON <- 0.01
+
 test_that("netmeta and stan reconstruct the same surface (CI equivalence)", {
   skip_if_not_installed("netmeta")
   skip_if_not_installed("rstan")
@@ -23,6 +31,42 @@ test_that("netmeta and stan reconstruct the same surface (CI equivalence)", {
 
   comparison <- compare_engines(fit_nm, fit_st)
   expect_lt(max(abs(comparison$difference)), EPSILON)
+
+  # Equivalence extends to uncertainty: per-drug standard errors agree
+  # (the effects tables share network drug order).
+  expect_identical(fit_st$effects$drug, fit_nm$effects$drug)
+  expect_lt(max(abs(fit_st$effects$std_error - fit_nm$effects$std_error)),
+            SE_EPSILON)
+})
+
+test_that("netmeta and stan agree on anchored estimates and standard errors", {
+  skip_if_not_installed("netmeta")
+  skip_if_not_installed("rstan")
+
+  # A single anchor: the case where the two paths are mathematically the
+  # same fit (the frequentist location shift equals the joint GLS the
+  # anchored Stan model computes), so any drift beyond Monte Carlo error
+  # is a real divergence. With several disagreeing anchors the paths
+  # legitimately differ a little — the joint fit also lets anchors
+  # update relative positions — which the anchoring oracle tests cover.
+  simulation <- simulate_direct_effect_network(
+    n_drugs = 8, n_comparisons = 24, n_anchors = 1,
+    heterogeneity = 0, seed = 20260828
+  )
+  anchored_nm <- anchor_surface(
+    fit_surface(simulation$network, engine = "netmeta")
+  )
+  anchored_st <- anchor_surface(
+    fit_surface(simulation$network, engine = "stan",
+                seed = 20260828, iter = 4000),
+    seed = 20260828, iter = 4000
+  )
+
+  expect_identical(anchored_st$effects$drug, anchored_nm$effects$drug)
+  expect_lt(max(abs(anchored_st$effects$estimate -
+                      anchored_nm$effects$estimate)), EPSILON)
+  expect_lt(max(abs(anchored_st$effects$std_error -
+                      anchored_nm$effects$std_error)), SE_EPSILON)
 })
 
 test_that("comparison table has the ticket schema and is order-agnostic", {

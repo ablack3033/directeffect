@@ -76,6 +76,19 @@
 #' `ess_tail` (`NA` on a pinned reference row, which is a constant, not
 #' a sampled quantity).
 #'
+#' @section The covariance component (output, `fit$covariance`):
+#' Every fit carries the full covariance matrix of its estimated
+#' effects: one row and column per drug, in the same order as the
+#' effects table, with `dimnames` naming the drugs. Both engines supply
+#' the same component in the same shape — the common-effect covariance
+#' of every drug versus the reference (netmeta) or the posterior
+#' covariance of `theta` (Stan) — and its diagonal is consistent with
+#' the effects table's `std_error` column. In an unanchored fit the
+#' reference drug's row and column are exact zeros (the reference is a
+#' constant); an anchored fit pins no drug, so no row is zero.
+#' Anchoring and the leverage-aware residual standardization consume
+#' this component.
+#'
 #' @section The other fit components (output):
 #' A `directeffect_fit` also carries `comparisons` and `anchors` (the
 #' input tables, unchanged), `heterogeneity` (netmeta: list `Q`, `df`,
@@ -91,15 +104,20 @@
 #'     `absolute_identifiable`.}
 #'   \item{[edge_residuals()]}{One row per comparison, aligned with
 #'     `fit$comparisons`: `target`, `comparator`, `observed`,
-#'     `predicted`, `residual`, `standardized_residual`.}
+#'     `predicted`, `residual`, `standardized_residual` (divided by the
+#'     residual's actual standard deviation; `NA` on a bridge
+#'     comparison, which nothing can corroborate), `leverage`.}
 #'   \item{[cycle_consistency()]}{One row per basis cycle: `cycle`,
 #'     `n_edges`, `inconsistency`, `std_error`, `z`. Zero rows when the
 #'     network has no cycles.}
 #'   \item{[compare_engines()]}{One row per drug: `drug`, `netmeta`,
 #'     `stan_mean`, `difference`, `standardized_difference` (`NA` where
-#'     both engines pin the reference exactly).}
+#'     both engines pin the reference exactly; a yardstick, not a test
+#'     statistic — the two fits share the same data).}
 #'   \item{[validate_recovery()]}{A list: `bias`, `rmse`, `coverage`,
-#'     `rank_correlation`, `n_drugs`, `reference`.}
+#'     `rank_correlation`, `n_drugs`, `reference`. For a surface fit
+#'     all four metrics cover the free drugs only (the pinned reference
+#'     row is excluded).}
 #' }
 #'
 #' @name directeffect_formats

@@ -171,6 +171,15 @@ refused.
   is what the anchored Stan model computes — restoring cross-engine
   agreement. (The precision weights for multiple anchors likewise come
   from the anchors' proposal covariance, not just its diagonal.)
+  *(Measured during implementation: the agreement with the joint GLS
+  is exact for a single anchor, and exact at the reference drug always
+  — profiling the surface out of the joint model is exact for the
+  location. With multiple disagreeing anchors the joint GLS also lets
+  the anchors update relative positions, which a location shift by
+  design does not, so the two-stage estimates and SEs then differ
+  slightly at non-reference drugs; the two-stage path reports the
+  honest, slightly larger, sampling variance of its own estimator.
+  The docs and oracle tests state this precisely.)*
 - **Multi-arm input is detected at the seam, not modeled.** Network
   construction warns when any `study_id` contributes more than one
   comparison, naming the studies. The Stan engine refuses such

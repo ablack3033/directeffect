@@ -25,9 +25,11 @@ generated its data. Works from the fit contract only, so it treats
 every engine identically. For a surface fit the truth is re-centred
 at the fit's arbitrary reference drug before comparison, and the
 reference row itself (estimated as exactly 0 by construction) is
-excluded from bias, RMSE, and coverage. For an anchored fit
-(\code{reference = "placebo"}) the truth is already on the placebo = 0
-scale, so it is compared directly and every drug contributes.
+excluded from all four metrics — bias, RMSE, coverage, and rank
+correlation — so its phantom exact (0, 0) pair cannot flatter any of
+them. For an anchored fit (\code{reference = "placebo"}) the truth is
+already on the placebo = 0 scale, so it is compared directly and
+every drug contributes.
 }
 \examples{
 simulation <- simulate_direct_effect_network(

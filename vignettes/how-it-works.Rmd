@@ -189,9 +189,11 @@ many stricter versions of it) on every commit.
 ## One more safeguard: two independent calculators
 
 Everything above was computed by a frequentist engine (the netmeta
-package). directeffect also implements the identical model a second
-time, in Stan, a completely independent Bayesian engine — and requires
-the two to agree on every drug, continuously, in its test suite. If two
-independent implementations reconstruct the same surface, an error in
-either would have to be an error in both. The *netmeta vs. Stan*
-vignette shows that comparison on this same example data.
+package). directeffect also implements the identical model — identical
+likelihood for networks with one comparison per study, like this one —
+a second time, in Stan, a completely independent Bayesian engine, and
+requires the two to agree on every drug's estimate *and* standard
+error, continuously, in its test suite. If two independent
+implementations reconstruct the same surface, an error in either would
+have to be an error in both. The *netmeta vs. Stan* vignette shows
+that comparison on this same example data.

@@ -12,8 +12,14 @@ fit_surface(de, engine = c("netmeta", "stan"), reference = NULL, ...)
 components separately (see \code{\link[=check_connectivity]{check_connectivity()}}) otherwise.}
 
 \item{engine}{\code{"netmeta"} (frequentist network meta-analysis) or
-\code{"stan"} (Bayesian, identical likelihood). Both engines fit the same
-common-effect model \code{y_k ~ N(theta_target - theta_comparator, se_k^2)} and return the same fit contract.}
+\code{"stan"} (Bayesian). For networks with one comparison per study,
+both engines fit the identical common-effect likelihood
+\code{y_k ~ N(theta_target - theta_comparator, se_k^2)} and return the
+same fit contract. Multi-arm evidence (several comparisons sharing
+a \code{study_id}) is supported by the \code{"netmeta"} engine only in this
+version: netmeta models the correlation between contrasts sharing
+an arm, while the Stan engine refuses such networks rather than
+mis-treat the rows as independent.}
 
 \item{reference}{Drug fixed at 0 for identification. Defaults to the
 first treatment alphabetically. The choice is arbitrary and does not
@@ -21,16 +27,21 @@ affect any estimated difference between drugs.}
 
 \item{...}{Engine-specific options. The Stan engine accepts \code{chains}
 (default 4), \code{iter} (default 2000), \code{seed}, \code{refresh} (default 0),
-and any further argument to \code{rstan::sampling()}. The netmeta engine
-accepts none.}
+and any further argument to \code{rstan::sampling()}. When no \code{seed} is
+supplied the sampler is seeded from the wall clock and process id;
+in either case the caller's global random-number state is left
+untouched, so fitting never disturbs the session's
+reproducibility. The netmeta engine accepts none.}
 }
 \value{
 An object of class \code{directeffect_fit} with components
 \code{effects} (tidy per-drug table: \code{drug}, \code{estimate}, \code{std_error},
-\code{lower}, \code{upper}, \code{scale}, \code{reference}, \code{engine}), \code{comparisons},
-\code{anchors}, \code{heterogeneity}, \code{diagnostics}, \code{engine}, \code{engine_fit}
-(the raw engine object — the only place engine internals appear),
-and \code{network}.
+\code{lower}, \code{upper}, \code{scale}, \code{reference}, \code{engine}), \code{covariance}
+(the full covariance of the estimated effects; see
+\link{directeffect_formats}), \code{comparisons}, \code{anchors},
+\code{heterogeneity}, \code{diagnostics}, \code{engine}, \code{engine_fit} (the raw
+engine object — the only place engine internals appear), and
+\code{network}.
 }
 \description{
 Estimates the relative positions of all drugs in a connected
