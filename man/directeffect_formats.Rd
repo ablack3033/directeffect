@@ -18,8 +18,8 @@ multiplicative effect measures (HR, RR, OR): pass \code{log(1.02)}, not
 only labels output. Plots can back-transform via \code{scale = "natural"}.
 }
 
-\section{Input}{
- the comparisons table:
+\section{The comparisons table (input)}{
+
 One row per estimated drug-versus-drug effect (the same pair may
 appear in any number of rows). Required columns:
 \describe{
@@ -44,8 +44,10 @@ statistical connectivity does not establish causal transportability.
 Construction fails loudly on: a missing required column, zero rows,
 a self-comparison (\code{target == comparator}), a missing or empty drug
 name, a missing estimate, or a non-positive standard error.
+}
 
- the anchors table:
+\section{The anchors table (input)}{
+
 Optional. One row per absolute (placebo-controlled) estimate:
 \describe{
 \item{\code{study_id}}{Character (or coercible). Trial identifier.}
@@ -60,8 +62,8 @@ of \code{drug} versus \code{reference} on the log scale.}
 }
 }
 
-\section{Output}{
- the effects table (\code{fit$effects}):
+\section{The effects table (output, \code{fit$effects})}{
+
 Every fit — either engine, anchored or not — carries a tidy per-drug
 effects table with these columns, in this order:
 \describe{
@@ -85,16 +87,20 @@ append the posterior summary columns \code{median}, \code{mean}, \code{sd}, \cod
 \code{q975} and the convergence diagnostics \code{rhat}, \code{ess_bulk},
 \code{ess_tail} (\code{NA} on a pinned reference row, which is a constant, not
 a sampled quantity).
+}
 
- the other fit components:
+\section{The other fit components (output)}{
+
 A \code{directeffect_fit} also carries \code{comparisons} and \code{anchors} (the
 input tables, unchanged), \code{heterogeneity} (netmeta: list \code{Q}, \code{df},
 \code{p_value}, \code{tau}, \code{I2}; Stan common-effect: list \code{model}, \code{tau}),
 \code{diagnostics} (list, reserved), \code{engine}, \code{engine_fit} (the raw
 netmeta or stanfit object — the only place engine internals appear),
 and \code{network} (the \code{directeffect_network} that was fitted).
+}
 
- diagnostic tables:
+\section{Diagnostic tables (output)}{
+
 \describe{
 \item{\code{\link[=check_connectivity]{check_connectivity()}}}{One row per connected component:
 \code{component}, \code{n_drugs}, \code{n_comparisons}, \code{n_anchors},

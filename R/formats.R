@@ -11,7 +11,7 @@
 #' `1.02`. The package never log-transforms for you; `effect_measure`
 #' only labels output. Plots can back-transform via `scale = "natural"`.
 #'
-#' @section Input: the comparisons table:
+#' @section The comparisons table (input):
 #' One row per estimated drug-versus-drug effect (the same pair may
 #' appear in any number of rows). Required columns:
 #' \describe{
@@ -37,7 +37,7 @@
 #' a self-comparison (`target == comparator`), a missing or empty drug
 #' name, a missing estimate, or a non-positive standard error.
 #'
-#' @section Input: the anchors table:
+#' @section The anchors table (input):
 #' Optional. One row per absolute (placebo-controlled) estimate:
 #' \describe{
 #'   \item{`study_id`}{Character (or coercible). Trial identifier.}
@@ -51,7 +51,7 @@
 #'   \item{`std_error`}{Numeric, strictly positive. Its standard error.}
 #' }
 #'
-#' @section Output: the effects table (`fit$effects`):
+#' @section The effects table (output, `fit$effects`):
 #' Every fit — either engine, anchored or not — carries a tidy per-drug
 #' effects table with these columns, in this order:
 #' \describe{
@@ -76,7 +76,7 @@
 #' `ess_tail` (`NA` on a pinned reference row, which is a constant, not
 #' a sampled quantity).
 #'
-#' @section Output: the other fit components:
+#' @section The other fit components (output):
 #' A `directeffect_fit` also carries `comparisons` and `anchors` (the
 #' input tables, unchanged), `heterogeneity` (netmeta: list `Q`, `df`,
 #' `p_value`, `tau`, `I2`; Stan common-effect: list `model`, `tau`),
@@ -84,7 +84,7 @@
 #' netmeta or stanfit object — the only place engine internals appear),
 #' and `network` (the `directeffect_network` that was fitted).
 #'
-#' @section Output: diagnostic tables:
+#' @section Diagnostic tables (output):
 #' \describe{
 #'   \item{[check_connectivity()]}{One row per connected component:
 #'     `component`, `n_drugs`, `n_comparisons`, `n_anchors`,
