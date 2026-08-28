@@ -227,6 +227,20 @@ warn_on_estimand_differences <- function(comparisons) {
   invisible(differing)
 }
 
+# Per-drug attributes derived from the network: how many comparisons
+# each drug appears in, and whether it carries an absolute anchor.
+# Graph logic stays here with the network object, not in plotting code.
+network_node_data <- function(de) {
+  counts <- table(c(de$comparisons$target, de$comparisons$comparator))
+  anchored_drugs <- if (is.null(de$anchors)) character(0) else de$anchors$drug
+  data.frame(
+    drug = de$treatments,
+    n_comparisons = as.integer(counts[de$treatments]),
+    anchored = de$treatments %in% anchored_drugs,
+    row.names = NULL
+  )
+}
+
 build_network_graph <- function(comparisons, treatments) {
   edges <- data.frame(
     from = comparisons$target,
