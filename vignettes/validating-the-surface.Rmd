@@ -1,0 +1,103 @@
+---
+title: "Validating the surface"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Validating the surface}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+has_engine <- requireNamespace("netmeta", quietly = TRUE)
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>",
+  fig.width = 6, fig.height = 4,
+  eval = has_engine
+)
+```
+
+Diagnostics matter more than sophisticated estimation. Before trusting
+a fitted surface — let alone an anchored one — ask whether the
+comparative estimates are internally coherent, and whether the
+estimator would recover a truth you control.
+
+```{r fit}
+library(directeffect)
+
+de <- direct_effect_network(
+  example_comparisons,
+  anchors = example_anchors,
+  effect_measure = "HR"
+)
+fit <- fit_surface(de, engine = "netmeta")
+```
+
+## Edge residuals
+
+For every comparison: the observed effect, the effect the fitted
+surface predicts (`theta_target - theta_comparator`), and their
+difference standardized by the comparison's standard error. Large
+standardized residuals mark comparisons that conflict with the rest of
+the network.
+
+```{r residuals}
+residuals <- edge_residuals(fit)
+residuals[order(-abs(residuals$standardized_residual)), ][1:5, ]
+```
+
+## Cycle consistency
+
+Around any closed loop of comparisons, the observed effects must sum to
+zero if they are mutually consistent — walking A→B→C→A has to bring you
+back to the same height. `cycle_consistency()` evaluates a *cycle
+basis* (every cycle in the network is a combination of basis cycles),
+so nothing is enumerated exhaustively; repeat comparisons of a pair are
+pooled by precision first.
+
+```{r cycles}
+cycles <- cycle_consistency(fit)
+cycles
+```
+
+```{r cycle-plot, eval = has_engine && requireNamespace("ggplot2", quietly = TRUE)}
+plot_cycle_consistency(fit)
+```
+
+An inconsistency announces itself. Inject one — flip a single
+comparison by 0.5 on the log scale — and both diagnostics flag it:
+
+```{r injected}
+broken <- example_comparisons
+broken$estimate[3] <- broken$estimate[3] + 0.5
+fit_broken <- fit_surface(
+  direct_effect_network(broken, effect_measure = "HR"),
+  engine = "netmeta"
+)
+
+max(abs(edge_residuals(fit_broken)$standardized_residual))
+max(abs(cycle_consistency(fit_broken)$z))
+```
+
+## Recovery from known truth
+
+The strongest oracle needs no real data at all: simulate a network
+where the truth is known, fit it, and measure recovery.
+`simulate_direct_effect_network()` retains the generating truth, and
+`validate_recovery()` reports bias, RMSE, interval coverage, and rank
+correlation from the fit contract alone — it works identically for
+either engine.
+
+```{r recovery}
+simulation <- simulate_direct_effect_network(
+  n_drugs = 20, n_comparisons = 80, n_anchors = 3,
+  heterogeneity = 0, seed = 42, se_range = c(0.03, 0.08)
+)
+recovered <- fit_surface(simulation$network, engine = "netmeta")
+validate_recovery(recovered, simulation)
+```
+
+In the low-noise regime the bias is near zero and coverage is near
+nominal; the package's test suite pins both down permanently. Together
+the three oracles — hand-computable examples, cross-engine agreement
+(see *netmeta vs. Stan*), and simulation truth — are what let the
+surface be trusted.

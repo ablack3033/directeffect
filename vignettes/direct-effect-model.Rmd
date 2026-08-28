@@ -1,0 +1,132 @@
+---
+title: "The direct-effect model"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The direct-effect model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+has_engine <- requireNamespace("netmeta", quietly = TRUE)
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>",
+  fig.width = 6, fig.height = 4,
+  eval = has_engine
+)
+```
+
+Comparative-effectiveness studies mostly estimate *relative* effects:
+drug A versus drug B from an active-comparator design. Each estimate
+constrains only the difference between the two drugs' latent direct
+effects. The researcher ultimately wants each drug's *direct* effect
+versus placebo — and almost none of the evidence speaks to that
+directly.
+
+directeffect keeps the two resulting questions separate:
+
+1. **The surface.** Are my comparative estimates internally coherent,
+   and what relative structure do they imply? Comparisons alone answer
+   this.
+2. **The sea level.** Where does that coherent structure sit relative
+   to placebo = 0? Only absolute (placebo-anchored) evidence answers
+   this.
+
+## Why the separation matters
+
+A null active-comparator estimate does not mean either drug is safe —
+only that the two drugs sit at the same height. Three consistent
+comparisons and one anchor make the point:
+
+```{r mandatory}
+library(directeffect)
+
+comparisons <- data.frame(
+  study_id   = c("S1", "S2", "S3"),
+  target     = c("A", "A", "B"),
+  comparator = c("B", "C", "C"),
+  estimate   = c(0.0, 0.4, 0.4),   # A - B is null!
+  std_error  = c(0.05, 0.05, 0.05)
+)
+anchors <- data.frame(
+  study_id  = "RCT1",
+  drug      = "C",
+  reference = "placebo",
+  estimate  = 0.3,
+  std_error = 0.04
+)
+
+de <- direct_effect_network(comparisons, anchors = anchors,
+                            effect_measure = "HR")
+absolute <- anchor_surface(fit_surface(de, engine = "netmeta"))
+absolute$effects[, c("drug", "estimate", "std_error")]
+```
+
+The A–B comparison is exactly null, yet both drugs come out at
+log HR 0.7 above placebo. The null comparison told us A and B are at
+the same height; the anchor on C told us how high that is.
+
+## The workflow on a realistic network
+
+The packaged example data simulate eight fictional drugs with sixteen
+head-to-head estimates and two placebo anchors.
+
+```{r construct}
+de <- direct_effect_network(
+  example_comparisons,
+  anchors = example_anchors,
+  effect_measure = "HR"
+)
+de
+```
+
+Before fitting anything, inspect the evidence. `check_connectivity()`
+reports, per connected component, whether absolute effects are even
+identifiable there:
+
+```{r connectivity}
+check_connectivity(de)
+```
+
+```{r network-plot, eval = has_engine && requireNamespace("ggraph", quietly = TRUE)}
+plot_network(de)
+```
+
+## Fit the surface, then set the sea level
+
+Surface fitting deliberately ignores the anchors and fixes an arbitrary
+reference drug at 0 — only relative positions are identified:
+
+```{r surface}
+surface <- fit_surface(de, engine = "netmeta")
+surface
+```
+
+Anchoring is a distinct, revisable second step. The anchors position
+the whole structure against placebo = 0 while keeping their own
+uncertainty:
+
+```{r anchor}
+absolute <- anchor_surface(surface)
+absolute
+```
+
+```{r surface-plot, eval = has_engine && requireNamespace("ggplot2", quietly = TRUE)}
+plot_effect_surface(absolute)
+```
+
+```{r sea-level-plot, eval = has_engine && requireNamespace("ggplot2", quietly = TRUE)}
+plot_sea_level(absolute)
+```
+
+The same calls draw an unanchored fit too — but then the plot labels
+the positions as relative to an arbitrary reference, never as absolute
+effects, and `plot_sea_level()` refuses outright: a relative surface
+has no sea level.
+
+## Where next
+
+- *netmeta vs. Stan* shows the same surface reconstructed by two
+  independent engines — the package's built-in correctness check.
+- *Validating the surface* covers edge residuals, cycle consistency,
+  and simulation-based recovery.

@@ -1,0 +1,99 @@
+---
+title: "netmeta vs. Stan: two engines, one surface"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{netmeta vs. Stan: two engines, one surface}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+has_engines <- requireNamespace("netmeta", quietly = TRUE) &&
+  requireNamespace("rstan", quietly = TRUE)
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>",
+  fig.width = 5, fig.height = 5,
+  eval = has_engines
+)
+```
+
+The v0.1 goal of directeffect, verbatim from its design: *demonstrate
+that the same direct-effect surface is reconstructed independently by
+netmeta and Stan.* Both engines fit the identical common-effect model
+
+$$y_k \sim N(\theta_{\text{target}[k]} - \theta_{\text{comparator}[k]},\; se_k^2)$$
+
+— netmeta by frequentist network meta-analysis, Stan by MCMC under a
+deliberately weak `normal(0, 5)` prior so the comparison is meaningful.
+If two independent implementations agree, an error in either would have
+to be an error in both.
+
+## Fit both engines
+
+Both engines sit behind the same `fit_surface()` seam and return the
+same fit contract; downstream code cannot tell them apart except via
+the `engine` field.
+
+```{r fit}
+library(directeffect)
+
+de <- direct_effect_network(
+  example_comparisons,
+  anchors = example_anchors,
+  effect_measure = "HR"
+)
+
+fit_nm <- fit_surface(de, engine = "netmeta")
+fit_st <- fit_surface(de, engine = "stan", seed = 731, refresh = 0)
+
+fit_nm$effects[, c("drug", "estimate", "std_error")]
+```
+
+The Stan fit carries the same core columns plus posterior summaries and
+convergence diagnostics:
+
+```{r stan-columns}
+fit_st$effects[, c("drug", "estimate", "sd", "rhat", "ess_bulk")]
+```
+
+## Compare
+
+`compare_engines()` lines the two fits up per drug:
+
+```{r compare}
+comparison <- compare_engines(fit_nm, fit_st)
+comparison
+```
+
+```{r compare-plot, eval = has_engines && requireNamespace("ggplot2", quietly = TRUE)}
+plot_engine_comparison(fit_nm, fit_st)
+```
+
+Points on the identity line mean the engines reconstruct the same
+surface. The differences here are Monte Carlo noise plus the negligible
+shrinkage of the weak prior — both far below anything of scientific
+consequence.
+
+## Continuously enforced
+
+This is not just a vignette exercise: the package's test suite
+simulates a network under the model's own assumptions and requires
+every per-drug difference between the engines to stay below 0.02 on the
+log scale, on every commit, in CI. The two implementations validate
+each other from day one.
+
+Anchoring works on either engine as well — the Bayesian path refits
+with a separate anchored Stan model in which the anchors (not an
+arbitrary constraint) identify the absolute location, while the
+frequentist path applies a precision-weighted location offset:
+
+```{r anchor}
+absolute_nm <- anchor_surface(fit_nm)
+absolute_st <- anchor_surface(fit_st, seed = 731, refresh = 0)
+
+data.frame(
+  drug = absolute_nm$effects$drug,
+  netmeta = round(absolute_nm$effects$estimate, 3),
+  stan = round(absolute_st$effects$estimate, 3)
+)
+```
