@@ -1,23 +1,4 @@
-# The spec's 3-drug example: A, B, C compared pairwise, C anchored to placebo.
-spec_comparisons <- function() {
-  data.frame(
-    study_id   = c("S1", "S2", "S3"),
-    target     = c("A", "A", "B"),
-    comparator = c("B", "C", "C"),
-    estimate   = c(log(1.02), log(1.34), log(1.29)),
-    std_error  = c(0.07, 0.09, 0.08)
-  )
-}
-
-spec_anchors <- function() {
-  data.frame(
-    study_id  = "RCT1",
-    drug      = "C",
-    reference = "placebo",
-    estimate  = log(1.20),
-    std_error = 0.04
-  )
-}
+# The spec's 3-drug example tables live in helper-directeffect.R.
 
 test_that("constructor builds a validated network from the spec example", {
   de <- direct_effect_network(spec_comparisons(), anchors = spec_anchors(),

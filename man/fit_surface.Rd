@@ -4,7 +4,7 @@
 \alias{fit_surface}
 \title{Fit the relative direct-effect surface}
 \usage{
-fit_surface(de, engine = c("netmeta", "stan"), reference = NULL)
+fit_surface(de, engine = c("netmeta", "stan"), reference = NULL, ...)
 }
 \arguments{
 \item{de}{A \code{directeffect_network} created by
@@ -18,6 +18,11 @@ common-effect model \code{y_k ~ N(theta_target - theta_comparator, se_k^2)} and 
 \item{reference}{Drug fixed at 0 for identification. Defaults to the
 first treatment alphabetically. The choice is arbitrary and does not
 affect any estimated difference between drugs.}
+
+\item{...}{Engine-specific options. The Stan engine accepts \code{chains}
+(default 4), \code{iter} (default 2000), \code{seed}, \code{refresh} (default 0),
+and any further argument to \code{rstan::sampling()}. The netmeta engine
+accepts none.}
 }
 \value{
 An object of class \code{directeffect_fit} with components

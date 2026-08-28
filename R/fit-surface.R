@@ -18,6 +18,10 @@
 #' @param reference Drug fixed at 0 for identification. Defaults to the
 #'   first treatment alphabetically. The choice is arbitrary and does not
 #'   affect any estimated difference between drugs.
+#' @param ... Engine-specific options. The Stan engine accepts `chains`
+#'   (default 4), `iter` (default 2000), `seed`, `refresh` (default 0),
+#'   and any further argument to `rstan::sampling()`. The netmeta engine
+#'   accepts none.
 #'
 #' @return An object of class `directeffect_fit` with components
 #'   `effects` (tidy per-drug table: `drug`, `estimate`, `std_error`,
@@ -41,7 +45,7 @@
 #' }
 #' @export
 fit_surface <- function(de, engine = c("netmeta", "stan"),
-                        reference = NULL) {
+                        reference = NULL, ...) {
   if (!inherits(de, "directeffect_network")) {
     stop("`de` must be a `directeffect_network` created by ",
          "`direct_effect_network()`.", call. = FALSE)
@@ -67,9 +71,8 @@ fit_surface <- function(de, engine = c("netmeta", "stan"),
   }
 
   switch(engine,
-    netmeta = fit_surface_netmeta(de, reference),
-    stan = stop("The Stan engine is not implemented yet; ",
-                "use `engine = \"netmeta\"`.", call. = FALSE)
+    netmeta = fit_surface_netmeta(de, reference, ...),
+    stan = fit_surface_stan(de, reference, ...)
   )
 }
 

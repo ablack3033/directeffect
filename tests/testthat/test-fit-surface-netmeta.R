@@ -1,34 +1,5 @@
-# Hand oracle: the common-effect surface is weighted least squares of the
-# comparison estimates on drug-difference contrasts with the reference
-# drug fixed at 0. Computed directly from the normal equations so engine
-# output can be checked against arithmetic, not against another engine.
-wls_surface <- function(comparisons, treatments, reference) {
-  free <- setdiff(treatments, reference)
-  X <- matrix(0, nrow(comparisons), length(free),
-              dimnames = list(NULL, free))
-  for (k in seq_len(nrow(comparisons))) {
-    target <- comparisons$target[k]
-    comparator <- comparisons$comparator[k]
-    if (target != reference) X[k, target] <- 1
-    if (comparator != reference) X[k, comparator] <- -1
-  }
-  W <- diag(1 / comparisons$std_error^2, nrow = nrow(comparisons))
-  V <- solve(t(X) %*% W %*% X)
-  list(
-    estimate = drop(V %*% t(X) %*% W %*% comparisons$estimate),
-    std_error = sqrt(diag(V))
-  )
-}
-
-spec_comparisons <- function() {
-  data.frame(
-    study_id   = c("S1", "S2", "S3"),
-    target     = c("A", "A", "B"),
-    comparator = c("B", "C", "C"),
-    estimate   = c(log(1.02), log(1.34), log(1.29)),
-    std_error  = c(0.07, 0.09, 0.08)
-  )
-}
+# The hand oracle wls_surface() and the spec example tables live in
+# helper-directeffect.R.
 
 test_that("netmeta surface matches the hand computation on the spec example", {
   skip_if_not_installed("netmeta")
@@ -88,15 +59,9 @@ test_that("the fit carries the full component contract", {
 test_that("anchors are deliberately ignored by surface fitting", {
   skip_if_not_installed("netmeta")
 
-  anchors <- data.frame(
-    study_id  = "RCT1",
-    drug      = "C",
-    reference = "placebo",
-    estimate  = log(1.20),
-    std_error = 0.04
-  )
   bare <- direct_effect_network(spec_comparisons(), effect_measure = "HR")
-  anchored <- direct_effect_network(spec_comparisons(), anchors = anchors,
+  anchored <- direct_effect_network(spec_comparisons(),
+                                    anchors = spec_anchors(),
                                     effect_measure = "HR")
 
   fit_bare <- fit_surface(bare, engine = "netmeta")
