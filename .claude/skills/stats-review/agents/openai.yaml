@@ -1,0 +1,3 @@
+interface:
+  display_name: "Stats Review"
+  short_description: "Statistical code review with verified findings"
