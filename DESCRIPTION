@@ -19,7 +19,9 @@ Imports:
     igraph,
     stats
 Suggests:
+    BH,
     netmeta,
+    RcppEigen,
     rstan,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
