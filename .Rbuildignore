@@ -1,0 +1,6 @@
+^\.claude$
+^\.scratch$
+^\.github$
+^skills-lock\.json$
+^.*\.Rproj$
+^\.Rproj\.user$

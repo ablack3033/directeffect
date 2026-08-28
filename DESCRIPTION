@@ -1,0 +1,20 @@
+Package: directeffect
+Title: Estimate Latent Direct Drug Effects from Networks of Comparative
+    Estimates
+Version: 0.0.0.9000
+Authors@R:
+    person("Adam", "Black", , "ablack3@gmail.com", role = c("aut", "cre"))
+Description: Estimates latent direct drug effects from a network of
+    comparative-effect estimates. Comparative estimates identify only
+    differences between drugs (the effect surface); absolute placebo
+    anchors position that surface against the placebo-defined sea level.
+    Provides frequentist and Bayesian estimation engines behind a single
+    interface, together with diagnostics for network coherence and
+    identifiability.
+License: Apache License (>= 2)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

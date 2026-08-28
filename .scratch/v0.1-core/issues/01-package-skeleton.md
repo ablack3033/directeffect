@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] `R CMD check` passes locally with no errors or warnings
 - [ ] A GitHub Actions workflow runs `R CMD check` on every push and passes
