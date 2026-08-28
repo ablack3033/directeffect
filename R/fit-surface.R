@@ -102,8 +102,13 @@ print.directeffect_fit <- function(x, digits = 3, ...) {
   cat("  Engine:         ", x$engine, "\n", sep = "")
   cat("  Effect measure: ", x$network$effect_measure, " (log scale)\n",
       sep = "")
-  cat("  Reference:      ", reference,
-      " (arbitrary; surface is relative)\n", sep = "")
+  if (identical(reference, "placebo")) {
+    cat("  Reference:      placebo = 0 (sea level; absolute direct ",
+        "effects)\n", sep = "")
+  } else {
+    cat("  Reference:      ", reference,
+        " (arbitrary; surface is relative)\n", sep = "")
+  }
   cat("\n")
   shown <- x$effects[, c("drug", "estimate", "std_error", "lower", "upper")]
   shown[-1] <- lapply(shown[-1], round, digits = digits)

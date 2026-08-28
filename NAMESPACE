@@ -3,6 +3,7 @@
 S3method(print,directeffect_connectivity)
 S3method(print,directeffect_fit)
 S3method(print,directeffect_network)
+export(anchor_surface)
 export(check_connectivity)
 export(direct_effect_network)
 export(fit_surface)

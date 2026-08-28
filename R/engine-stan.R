@@ -32,13 +32,14 @@ fit_surface_stan <- function(de, reference, chains = 4, iter = 2000,
   index <- stats::setNames(seq_along(drugs), drugs)
 
   comparisons <- de$comparisons
+  # as.array keeps length-1 inputs dimensioned as Stan arrays.
   stan_data <- list(
     N = nrow(comparisons),
     K = length(drugs),
-    target_idx = unname(index[comparisons$target]),
-    comparator_idx = unname(index[comparisons$comparator]),
-    y = comparisons$estimate,
-    se = comparisons$std_error
+    target_idx = as.array(unname(index[comparisons$target])),
+    comparator_idx = as.array(unname(index[comparisons$comparator])),
+    y = as.array(comparisons$estimate),
+    se = as.array(comparisons$std_error)
   )
 
   sf <- rstan::sampling(
@@ -51,30 +52,7 @@ fit_surface_stan <- function(de, reference, chains = 4, iter = 2000,
     ...
   )
 
-  sims <- rstan::extract(sf, pars = "theta", permuted = FALSE,
-                         inc_warmup = FALSE)
-  posterior <- as.data.frame(rstan::monitor(sims, warmup = 0,
-                                            print = FALSE))
-
-  effects <- data.frame(
-    drug = drugs,
-    estimate = posterior$mean,
-    std_error = posterior$sd,
-    lower = posterior$`2.5%`,
-    upper = posterior$`97.5%`,
-    scale = "log",
-    reference = reference,
-    engine = "stan",
-    median = posterior$`50%`,
-    mean = posterior$mean,
-    sd = posterior$sd,
-    q025 = posterior$`2.5%`,
-    q975 = posterior$`97.5%`,
-    rhat = posterior$Rhat,
-    ess_bulk = posterior$Bulk_ESS,
-    ess_tail = posterior$Tail_ESS,
-    row.names = NULL
-  )
+  effects <- stan_effects_table(sf, drugs, reference)
 
   # The reference is a constant, not a sampled quantity: pin it at exactly
   # 0 and mark its convergence diagnostics as not applicable.
@@ -94,6 +72,81 @@ fit_surface_stan <- function(de, reference, chains = 4, iter = 2000,
     engine = "stan",
     engine_fit = sf,
     network = de
+  )
+}
+
+# Bayesian sea level: refit with the anchored Stan model, in which the
+# anchors (not an arbitrary constraint) identify the absolute location
+# and their uncertainty flows into every drug's posterior.
+anchor_surface_stan <- function(fit, anchors, chains = 4, iter = 2000,
+                                seed = sample.int(.Machine$integer.max, 1),
+                                refresh = 0, ...) {
+  de <- fit$network
+  drugs <- de$treatments
+  index <- stats::setNames(seq_along(drugs), drugs)
+
+  comparisons <- de$comparisons
+  # as.array keeps length-1 inputs dimensioned as Stan arrays.
+  stan_data <- list(
+    N = nrow(comparisons),
+    K = length(drugs),
+    target_idx = as.array(unname(index[comparisons$target])),
+    comparator_idx = as.array(unname(index[comparisons$comparator])),
+    y = as.array(comparisons$estimate),
+    se = as.array(comparisons$std_error),
+    M = nrow(anchors),
+    anchor_idx = as.array(unname(index[anchors$drug])),
+    a = as.array(anchors$estimate),
+    a_se = as.array(anchors$std_error)
+  )
+
+  sf <- rstan::sampling(
+    compiled_stan_model("anchored_surface"),
+    data = stan_data,
+    chains = chains,
+    iter = iter,
+    seed = seed,
+    refresh = refresh,
+    ...
+  )
+
+  effects <- stan_effects_table(sf, drugs, reference = "placebo")
+  warn_on_convergence(effects)
+
+  anchored <- new_directeffect_fit(
+    effects = effects,
+    heterogeneity = list(model = "common", tau = 0),
+    engine = "stan",
+    engine_fit = sf,
+    network = de
+  )
+  anchored$anchors <- anchors
+  anchored
+}
+
+stan_effects_table <- function(sf, drugs, reference) {
+  sims <- rstan::extract(sf, pars = "theta", permuted = FALSE,
+                         inc_warmup = FALSE)
+  posterior <- as.data.frame(rstan::monitor(sims, warmup = 0,
+                                            print = FALSE))
+  data.frame(
+    drug = drugs,
+    estimate = posterior$mean,
+    std_error = posterior$sd,
+    lower = posterior$`2.5%`,
+    upper = posterior$`97.5%`,
+    scale = "log",
+    reference = reference,
+    engine = "stan",
+    median = posterior$`50%`,
+    mean = posterior$mean,
+    sd = posterior$sd,
+    q025 = posterior$`2.5%`,
+    q975 = posterior$`97.5%`,
+    rhat = posterior$Rhat,
+    ess_bulk = posterior$Bulk_ESS,
+    ess_tail = posterior$Tail_ESS,
+    row.names = NULL
   )
 }
 
