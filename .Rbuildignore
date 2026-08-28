@@ -1,5 +1,6 @@
 ^\.claude$
 ^\.scratch$
+^CLAUDE\.md$
 ^\.github$
 ^data-raw$
 ^skills-lock\.json$
