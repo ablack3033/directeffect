@@ -20,12 +20,14 @@ effect ordering), \code{n_drugs} (drugs contributing to the summaries),
 and \code{reference}.
 }
 \description{
-Compares a fitted surface against the known true effects of the
-simulation that generated its data. Works from the fit contract only,
-so it treats every engine identically. Because a surface fit is
-relative, the truth is re-centred at the fit's reference drug before
-comparison; the reference row itself (estimated as exactly 0 by
-construction) is excluded from bias, RMSE, and coverage.
+Compares a fit against the known true effects of the simulation that
+generated its data. Works from the fit contract only, so it treats
+every engine identically. For a surface fit the truth is re-centred
+at the fit's arbitrary reference drug before comparison, and the
+reference row itself (estimated as exactly 0 by construction) is
+excluded from bias, RMSE, and coverage. For an anchored fit
+(\code{reference = "placebo"}) the truth is already on the placebo = 0
+scale, so it is compared directly and every drug contributes.
 }
 \examples{
 simulation <- simulate_direct_effect_network(

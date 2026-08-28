@@ -64,3 +64,7 @@ if (requireNamespace("netmeta", quietly = TRUE)) {
   absolute$effects
 }
 }
+\seealso{
+\link{directeffect_formats} for the explicit anchors input
+schema and the effects table schema.
+}

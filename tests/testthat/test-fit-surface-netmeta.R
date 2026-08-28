@@ -87,6 +87,40 @@ test_that("estimated differences are invariant to the reference choice", {
   expect_equal(fit_c$effects$estimate[fit_c$effects$drug == "C"], 0)
 })
 
+test_that("the heterogeneity block matches the hand-computed Q", {
+  skip_if_not_installed("netmeta")
+
+  # Exactly consistent comparisons: the surface reproduces every edge,
+  # so the weighted residual sum of squares Q is 0 on df = 1
+  # (3 comparisons - 2 free effects).
+  consistent <- data.frame(
+    study_id   = c("S1", "S2", "S3"),
+    target     = c("A", "A", "B"),
+    comparator = c("B", "C", "C"),
+    estimate   = c(0.0, 0.4, 0.4),
+    std_error  = c(0.05, 0.05, 0.05)
+  )
+  de <- direct_effect_network(consistent, effect_measure = "HR")
+  fit <- fit_surface(de, engine = "netmeta")
+  expect_equal(fit$heterogeneity$Q, 0, tolerance = 1e-10)
+  expect_identical(as.integer(fit$heterogeneity$df), 1L)
+  expect_equal(fit$heterogeneity$tau, 0, tolerance = 1e-6)
+
+  # An inconsistent edge produces exactly the Q of the WLS residuals.
+  inconsistent <- consistent
+  inconsistent$estimate[3] <- 0.9
+  de2 <- direct_effect_network(inconsistent, effect_measure = "HR")
+  fit2 <- fit_surface(de2, engine = "netmeta")
+
+  oracle <- wls_surface(inconsistent, c("A", "B", "C"), "A")
+  theta <- c(A = 0, oracle$estimate)
+  predicted <- theta[inconsistent$target] - theta[inconsistent$comparator]
+  q_hand <- sum(((inconsistent$estimate - predicted) /
+                   inconsistent$std_error)^2)
+  expect_equal(fit2$heterogeneity$Q, q_hand, tolerance = 1e-8)
+  expect_gt(fit2$heterogeneity$I2, 0)
+})
+
 test_that("fitting a multi-component network fails informatively", {
   skip_if_not_installed("netmeta")
 

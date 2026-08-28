@@ -3,29 +3,38 @@
 \docType{data}
 \name{example_comparisons}
 \alias{example_comparisons}
-\title{Example comparative-effect estimates}
+\title{Example head-to-head comparisons: a simulated statin network}
 \format{
-A data frame with 16 rows and 5 columns:
+A data frame with 12 rows and 5 columns, in the comparisons
+input format documented in \link{directeffect_formats}:
 \describe{
-\item{study_id}{Study identifier.}
-\item{target, comparator}{The two drugs compared.}
-\item{estimate}{Estimated log hazard ratio, target vs comparator.}
+\item{study_id}{Simulated trial identifier.}
+\item{target, comparator}{The two statins compared.}
+\item{estimate}{Simulated log hazard ratio, target vs comparator.}
 \item{std_error}{Its standard error.}
 }
 }
 \source{
-Simulated; see \code{data-raw/example-network.R}.
+Simulated; see \code{data-raw/example-network.R}. The generating
+truth ships as \link{example_truth}.
 }
 \usage{
 example_comparisons
 }
 \description{
-A simulated evidence base of eight fictional drugs (abrelor, belvane,
-cordexa, delmiro, envarin, folzane, gravix, harlent) compared
-head-to-head: sixteen active-comparator estimates on the log hazard
-ratio scale. Together with \link{example_anchors} it powers the package
-vignettes. Generated deterministically by \code{data-raw/example-network.R}
-with mild between-study heterogeneity (tau = 0.02); the generating
-truth is recorded in that script.
+A realistic but \strong{entirely simulated} evidence base modeled on the
+statin trial literature: twelve head-to-head estimates among six
+statins (atorvastatin, fluvastatin, lovastatin, pravastatin,
+rosuvastatin, simvastatin) for a major-cardiovascular-events outcome,
+on the log hazard ratio scale. The drug names are real; every number
+is fake — drawn from the invented truth in \link{example_truth} — and must
+not be interpreted clinically. Together with \link{example_anchors} it
+powers the package vignettes. Generated deterministically by
+\code{data-raw/example-network.R} with mild between-study heterogeneity
+(tau = 0.02); the test suite verifies the shipped data matches that
+generator and that the workflow recovers \link{example_truth}.
+}
+\seealso{
+\link{directeffect_formats} for the full format reference.
 }
 \keyword{datasets}

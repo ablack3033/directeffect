@@ -72,6 +72,21 @@ test_that("an unanchored component prints as relative-only", {
   expect_output(print(report), "1 absolute anchor\\b")
 })
 
+test_that("a network with no anchors at all reports zero anchors", {
+  comparisons <- data.frame(
+    study_id   = c("S1", "S2"),
+    target     = c("A", "B"),
+    comparator = c("B", "C"),
+    estimate   = c(0.1, 0.2),
+    std_error  = c(0.05, 0.05)
+  )
+  report <- check_connectivity(
+    direct_effect_network(comparisons, effect_measure = "HR")
+  )
+  expect_identical(report$n_anchors, 0L)
+  expect_false(report$absolute_identifiable)
+})
+
 test_that("check_connectivity rejects non-network input", {
   expect_error(check_connectivity(data.frame()), "directeffect_network")
 })

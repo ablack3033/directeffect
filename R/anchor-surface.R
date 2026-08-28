@@ -29,6 +29,9 @@
 #'   `reference` is `"placebo"` and each estimate is the drug's direct
 #'   effect versus placebo on the log scale.
 #'
+#' @seealso [directeffect_formats] for the explicit anchors input
+#'   schema and the effects table schema.
+#'
 #' @examples
 #' comparisons <- data.frame(
 #'   study_id   = c("S1", "S2", "S3"),

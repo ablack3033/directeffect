@@ -30,6 +30,9 @@
 #'   (the raw engine object — the only place engine internals appear),
 #'   and `network`.
 #'
+#' @seealso [directeffect_formats] for the explicit schema of every
+#'   column in the effects table and the other fit components.
+#'
 #' @examples
 #' comparisons <- data.frame(
 #'   study_id   = c("S1", "S2", "S3"),

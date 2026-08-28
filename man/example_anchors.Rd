@@ -3,27 +3,35 @@
 \docType{data}
 \name{example_anchors}
 \alias{example_anchors}
-\title{Example placebo anchors}
+\title{Example placebo anchors: simulated landmark trials}
 \format{
-A data frame with 2 rows and 5 columns:
+A data frame with 3 rows and 5 columns, in the anchors input
+format documented in \link{directeffect_formats}:
 \describe{
-\item{study_id}{Trial identifier.}
-\item{drug}{The anchored drug.}
+\item{study_id}{Simulated trial identifier.}
+\item{drug}{The anchored statin.}
 \item{reference}{Always \code{"placebo"}.}
-\item{estimate}{Estimated log hazard ratio, drug vs placebo.}
+\item{estimate}{Simulated log hazard ratio, drug vs placebo.}
 \item{std_error}{Its standard error.}
 }
 }
 \source{
-Simulated; see \code{data-raw/example-network.R}.
+Simulated; see \code{data-raw/example-network.R}. The generating
+truth ships as \link{example_truth}.
 }
 \usage{
 example_anchors
 }
 \description{
-Two simulated placebo-controlled estimates for drugs in
-\link{example_comparisons}, on the log hazard ratio scale. Anchors carry
-the absolute information that positions the relative surface against
-placebo = 0.
+Three simulated placebo-controlled estimates for statins in
+\link{example_comparisons}, on the log hazard ratio scale — the pattern of
+the real statin literature, where a few landmark placebo trials
+carry the absolute information while most comparisons are
+head-to-head. Anchors position the relative surface against
+placebo = 0. Like the comparisons, the numbers are \strong{simulated}, not
+real trial results.
+}
+\seealso{
+\link{directeffect_formats} for the full format reference.
 }
 \keyword{datasets}

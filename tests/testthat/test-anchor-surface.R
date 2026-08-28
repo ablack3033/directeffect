@@ -129,6 +129,43 @@ test_that("anchors passed explicitly override the network's anchors", {
   expect_error(anchor_surface(fit, anchors = bad), "appear in no comparison")
 })
 
+test_that("multiple anchors combine by precision, checked by hand", {
+  skip_if_not_installed("netmeta")
+
+  fit <- fit_surface(mandatory_network(), engine = "netmeta")
+  # Two anchors that disagree: C proposes a higher surface than A.
+  anchors <- data.frame(
+    study_id  = c("RCT1", "RCT2"),
+    drug      = c("C", "A"),
+    reference = "placebo",
+    estimate  = c(0.30, 0.60),
+    std_error = c(0.04, 0.10)
+  )
+  absolute <- anchor_surface(fit, anchors = anchors)
+
+  # Hand computation of the frequentist sea level: each anchor proposes
+  # offset a_m - theta_surface, weighted by 1 / (a_se^2 + surface_se^2);
+  # every absolute effect is surface + offset with the offset variance
+  # added.
+  surface <- fit$effects
+  position <- match(anchors$drug, surface$drug)
+  proposed <- anchors$estimate - surface$estimate[position]
+  weight <- 1 / (anchors$std_error^2 + surface$std_error[position]^2)
+  offset <- sum(weight * proposed) / sum(weight)
+  offset_var <- 1 / sum(weight)
+
+  expect_equal(absolute$effects$estimate,
+               surface$estimate + offset, tolerance = 1e-10)
+  expect_equal(absolute$effects$std_error,
+               sqrt(surface$std_error^2 + offset_var), tolerance = 1e-10)
+
+  # The disagreeing second anchor pulls the surface up, and the more
+  # precise anchor dominates: the offset sits between the proposals,
+  # nearer the tighter one.
+  expect_true(offset > min(proposed) && offset < max(proposed))
+  expect_lt(abs(offset - proposed[1]), abs(offset - proposed[2]))
+})
+
 test_that("anchor uncertainty propagates into absolute intervals", {
   skip_if_not_installed("netmeta")
 

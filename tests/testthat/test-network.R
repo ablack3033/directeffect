@@ -72,6 +72,43 @@ test_that("construction fails on anchors for drugs absent from comparisons", {
                "appear in no comparison")
 })
 
+test_that("construction fails on zero-row or non-data-frame inputs", {
+  expect_error(direct_effect_network(spec_comparisons()[0, ]),
+               "at least one comparison")
+  expect_error(direct_effect_network(list(study_id = "S1")),
+               "must be a data frame")
+  expect_error(
+    direct_effect_network(spec_comparisons(), anchors = "not a table"),
+    "must be a data frame"
+  )
+})
+
+test_that("zero-row anchors are treated as no anchors", {
+  de <- direct_effect_network(spec_comparisons(),
+                              anchors = spec_anchors()[0, ],
+                              effect_measure = "HR")
+  expect_null(de$anchors)
+})
+
+test_that("construction fails when an anchor's drug equals its reference", {
+  anchors <- spec_anchors()
+  anchors$reference <- "C"
+  expect_error(direct_effect_network(spec_comparisons(), anchors = anchors),
+               "`drug` equals `reference`")
+})
+
+test_that("construction fails on non-numeric or missing estimates", {
+  comparisons <- spec_comparisons()
+  comparisons$estimate <- as.character(comparisons$estimate)
+  expect_error(direct_effect_network(comparisons),
+               "estimate.*numeric")
+
+  comparisons <- spec_comparisons()
+  comparisons$estimate[2] <- NA_real_
+  expect_error(direct_effect_network(comparisons),
+               "no missing values")
+})
+
 test_that("construction fails on an invalid effect measure", {
   expect_error(direct_effect_network(spec_comparisons(), effect_measure = NA),
                "effect_measure")

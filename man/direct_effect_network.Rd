@@ -53,3 +53,7 @@ de <- direct_effect_network(comparisons, anchors = anchors,
                             effect_measure = "HR")
 de
 }
+\seealso{
+\link{directeffect_formats} for the explicit input and output
+format reference, including validation rules.
+}

@@ -55,3 +55,7 @@ if (requireNamespace("netmeta", quietly = TRUE)) {
   fit$effects
 }
 }
+\seealso{
+\link{directeffect_formats} for the explicit schema of every
+column in the effects table and the other fit components.
+}

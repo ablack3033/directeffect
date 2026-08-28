@@ -23,6 +23,9 @@
 #'   `components` (integer component membership named by treatment),
 #'   `effect_measure`, and `metadata`.
 #'
+#' @seealso [directeffect_formats] for the explicit input and output
+#'   format reference, including validation rules.
+#'
 #' @examples
 #' comparisons <- data.frame(
 #'   study_id   = c("S1", "S2", "S3"),

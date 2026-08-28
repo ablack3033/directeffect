@@ -1,0 +1,148 @@
+---
+title: "Getting started with directeffect"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with directeffect}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+has_engine <- requireNamespace("netmeta", quietly = TRUE)
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>",
+  fig.width = 6, fig.height = 4,
+  eval = has_engine
+)
+```
+
+## What directeffect is
+
+Comparative-effectiveness studies mostly estimate *relative* effects:
+drug A versus drug B from an active-comparator design. Each such
+estimate constrains only the **difference** between the two drugs'
+latent direct effects. The researcher ultimately wants each drug's
+*direct* effect versus placebo — and almost none of the evidence
+speaks to that directly.
+
+directeffect reconstructs the direct effects from the network of
+comparative estimates, keeping two questions deliberately separate:
+
+1. **The surface.** Are my comparative estimates internally coherent,
+   and what relative structure do they imply? Comparisons alone answer
+   this.
+2. **The sea level.** Where does that structure sit relative to
+   placebo = 0? Only absolute (placebo-anchored) evidence answers this.
+
+The API mirrors the separation: `direct_effect_network()` →
+`fit_surface()` → `anchor_surface()`.
+
+## The example data
+
+The package ships a realistic but **entirely simulated** statin
+evidence base — real drug names, fake numbers (see `?example_truth`
+for the invented truth they were generated from). Twelve head-to-head
+estimates among six statins, plus three placebo-controlled anchor
+trials, all log hazard ratios:
+
+```{r data}
+library(directeffect)
+
+example_comparisons
+example_anchors
+```
+
+This is the shape real statin evidence has: most trials compare one
+active drug against another, while a few landmark placebo trials carry
+the absolute information. The input formats are documented in detail
+at `?directeffect_formats`.
+
+## 1. Build the network
+
+Construction validates the tables and computes the evidence graph — no
+model is fitted yet:
+
+```{r construct}
+de <- direct_effect_network(
+  example_comparisons,
+  anchors = example_anchors,
+  effect_measure = "HR"
+)
+de
+```
+
+Before fitting anything, inspect the evidence. `check_connectivity()`
+reports, per connected component, whether absolute effects are even
+identifiable there — a component with no anchor supports relative
+effects only, and the package will never pretend otherwise:
+
+```{r connectivity}
+check_connectivity(de)
+```
+
+```{r network-plot, eval = has_engine && requireNamespace("ggraph", quietly = TRUE)}
+plot_network(de)
+```
+
+## 2. Fit the surface
+
+Surface fitting deliberately ignores the anchors and fixes an
+arbitrary reference drug at 0 — only relative positions are
+identified. Two independent engines are available, `"netmeta"`
+(frequentist) and `"stan"` (Bayesian); they fit the identical model
+and return the identical contract:
+
+```{r surface}
+surface <- fit_surface(de, engine = "netmeta")
+surface
+```
+
+## 3. Set the sea level
+
+Anchoring is a distinct, revisable second step. The placebo trials
+position the whole structure against placebo = 0 while keeping their
+own uncertainty:
+
+```{r anchor}
+absolute <- anchor_surface(surface)
+absolute
+```
+
+`absolute$effects` is a plain data frame (schema at
+`?directeffect_formats`) ready for tables or further analysis.
+
+```{r surface-plot, eval = has_engine && requireNamespace("ggplot2", quietly = TRUE)}
+plot_effect_surface(absolute)
+```
+
+```{r sea-level-plot, eval = has_engine && requireNamespace("ggplot2", quietly = TRUE)}
+plot_sea_level(absolute)
+```
+
+The same calls draw an unanchored fit too — but then the plot labels
+the positions as relative to an arbitrary reference, never as absolute
+effects, and `plot_sea_level()` refuses outright: a relative surface
+has no sea level.
+
+## 4. Check the evidence
+
+Two quick diagnostics ask whether the comparative estimates actually
+agree with one another:
+
+```{r diagnostics}
+edge_residuals(surface)
+
+cycle_consistency(surface)
+```
+
+*Validating the surface* covers these in depth.
+
+## Where next
+
+- *How directeffect works* explains the method from scratch — no
+  background beyond basic statistics assumed — and checks the package
+  against the example data's known truth.
+- *netmeta vs. Stan* shows the same surface reconstructed by two
+  independent engines — the package's built-in correctness check.
+- *Validating the surface* covers edge residuals, cycle consistency,
+  and simulation-based recovery.
